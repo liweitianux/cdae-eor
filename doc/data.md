@@ -36,7 +36,7 @@ radio halos.
 Follow the instructions there to install the `FG21sim` software and
 obtain the necessary template maps.
 
-### Galactic synchrotron emission
+### A. Galactic synchrotron emission
 
 1. Extract the template patch from the all-sky HEALPix template by using
    [`get-healpix-patch`](https://github.com/liweitianux/fg21sim/blob/master/bin/get-healpix-patch):
@@ -94,7 +94,7 @@ obtain the necessary template maps.
 The simulated sky maps are named `gsyn_<freq>.fits`.
 
 
-### Galactic free-free emission
+### B. Galactic free-free emission
 
 1. Extract the template patch from the all-sky HEALPix template:
 
@@ -149,7 +149,7 @@ The simulated sky maps are named `gsyn_<freq>.fits`.
 The simulated sky maps are named `gff_<freq>.fits`.
 
 
-### Radio halos
+### C. Radio halos
 
 1. Create configuration file (`halos.conf`):
 
@@ -271,3 +271,143 @@ project.
 
 Observational Simulation
 ------------------------
+By employing the latest
+[SKA1-Low layout configuration](https://astronomers.skatelescope.org/wp-content/uploads/2016/09/SKA-TEL-SKO-0000422_02_SKA1_LowConfigurationCoordinates-1.pdf)
+(released on 2016 May 21),
+the [OSKAR](https://github.com/OxfordSKA/OSKAR) simulator is used to
+perform the observational simulation to generate the visibility data
+for each sky map.
+Then the visibility data is imaged by the
+[WSClean](https://sourceforge.net/projects/wsclean/) imager to create
+the simulated SKA images.
+
+1. Generate the *telescope model* for the OSKAR simulator by using
+   [`make-ska1low-model`](https://github.com/liweitianux/fg21sim/blob/master/bin/make-ska1low-model):
+
+   ```sh
+   $ make-ska1low-model -o ska1low.tm
+   ```
+
+   Or use the pre-generated one by me at
+   [atoolbox/astro/oskar/telescopes/ska1low.tm](https://github.com/liweitianux/atoolbox/blob/master/astro/oskar/telescopes/ska1low.tm).
+
+2. Convert the sky maps into *sky models* for OSKAR by using
+   [`fits2skymodel.py`](https://github.com/liweitianux/atoolbox/blob/master/astro/oskar/fits2skymodel.py):
+
+   ```sh
+   $ for f in <skymaps-dir>/*<freq>.fits; do \
+         fits2skymodel.py -o skymodel ${f}; \
+         outfile=skymodel/$(basename ${f%.fits}.osm); \
+         echo "<freq> ${outfile}" >> skymodel.list; \
+     done
+   ```
+
+   For the Galactic emission, the sky maps of synchrotron and free-free
+   emissions are combined before converting to the OSKAR sky models.
+
+   As for the extragalactic point sources, the bright sources with a
+   158 MHz flux density greater than 10 mJy are removed first, which
+   corresponds to pixels with value greater than ~1400 K are removed.
+
+   ```sh
+   $ fits2skymodel.py --pixel-size 20 --max-value 1400 \
+         -f 158 -o skymodel --create-mask mask.fits \
+         <skymaps-dir>/ptr_158.00.fits
+   $ rm skymodel/ptr_158.00.osm
+
+   $ for f in <skymaps-dir>/*<freq>.fits; do \
+         fits2skymodel.py --pixel-size 20 -f <freq> \
+             --mask mask.fits -o skymodel ${f}; \
+         outfile=skymodel/$(basename ${f%.fits}.osm); \
+         echo "<freq> ${outfile}" >> skymodel.list; \
+     done
+   ```
+
+3. Prepare the base OSKAR configuration file (`oskar.ini`):
+
+   ```ini
+   [General]
+   app=oskar_sim_interferometer
+
+   [simulator]
+   max_sources_per_chunk=524288
+   double_precision=false
+   use_gpus=true
+   keep_log_file=true
+   write_status_to_log_file=true
+
+   [sky]
+   advanced/apply_horizon_clip=false
+   oskar_sky_model/file=
+
+   [telescope]
+   aperture_array/array_pattern/enable=true
+   aperture_array/element_pattern/dipole_length=0.5
+   input_directory=telescopes/ska1low.tm
+   aperture_array/element_pattern/dipole_length_units=Wavelengths
+   aperture_array/element_pattern/functional_type=Dipole
+   pol_mode=Scalar
+   normalise_beams_at_phase_centre=true
+   allow_station_beam_duplication=true
+   station_type=Aperture array
+
+   [observation]
+   phase_centre_ra_deg=0.0
+   phase_centre_dec_deg=-27.0
+   start_time_utc=2000-01-01T06:30:00.000
+   length=21600.0
+   num_time_steps=72
+   num_channels=1
+   start_frequency_hz=
+
+   [interferometer]
+   uv_filter_max=max
+   time_average_sec=300.0
+   uv_filter_units=Wavelengths
+   channel_bandwidth_hz=80000.0
+   uv_filter_min=min
+   oskar_vis_filename=
+   ms_filename=
+   ```
+
+4. Do observational simulations by using
+   [`run_oskar.py`](https://github.com/liweitianux/atoolbox/blob/master/astro/oskar/run_oskar.py):
+
+   ```sh
+   $ run_oskar.py -c oskar.ini -l skymodel.list -o visibility
+   ```
+
+5. Create images by using
+   [`wsclean.py`](https://github.com/liweitianux/atoolbox/blob/master/astro/oskar/wsclean.py),
+   which wraps on WSClean to be easier to use:
+
+   ```sh
+   $ mkdir images && cd images
+   $ wsclean.py --threshold <threshold> --weight natural \
+         --uv-range 30:1000 --size 1800 --pixelsize 20 \
+         --circular-beam --fit-spec-order 2 \
+         --name <name_prefix> \
+         --ms ../visibility/*.ms
+   ```
+
+6. Convert image units from [Jy/beam] to [K] by using
+   [`jybeam2k.py`](https://github.com/liweitianux/atoolbox/blob/master/astro/oskar/jybeam2k.py):
+
+   ```sh
+   # Get the average beam size of the images among the frequency band
+   $ beamsize *-????-image.fits
+   $ for f in *-????-image.fits; do \
+         jybeam2k.py -b <beamsize> ${f} ${f%.fits}K.fits; \
+     done
+   ```
+
+7. Create image cube and crop by using
+   [`fitscube.py`](https://github.com/liweitianux/atoolbox/blob/master/astro/fits/fitscube.py):
+
+   ```sh
+   $ fitscube.py create -z 154e6 -s 80e3 -u Hz \
+         -o <prefix>_cube.fits -i images/*-imageK.fits
+   $ fitscube.py crop -n 360 \
+         -i <prefix>_cube.fits \
+         -o <prefix>_n360_cube.fits
+   ```
