@@ -13,7 +13,7 @@ that are associated with the paper entitled
 Guides
 ------
 1. [Install dependencies](doc/dependencies.md)
-2. [Data simulation](doc/simulation.md)
+2. [Data simulation](doc/data.md)
 3. [EoR signal separation with CDAE](code/cdae.ipynb)
 4. [Data without Fourier Transform](code/cdae-noft.ipynb)
 5. [Polynomial fitting method](code/polyfit.ipynb)
