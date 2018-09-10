@@ -12,7 +12,7 @@ that are associated with the paper entitled
 
 Guides
 ------
-1. [Install dependencies](doc/dependencies.md)
+1. [Installation](doc/installation.md)
 2. [Data simulation](doc/data.md)
 3. [EoR signal separation with CDAE](code/cdae.ipynb)
 4. [Data without Fourier Transform](code/cdae-noft.ipynb)
