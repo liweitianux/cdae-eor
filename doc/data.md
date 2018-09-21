@@ -18,6 +18,7 @@ The simulated image cubes used in the paper are provided for download:
 * [Radio halos](../data/halos.uvcut_b158c80_n360-cube.fits)
   (md5: 1362542f19b408fdf6a62ba0b7ba2a8a)
 
+Each files is about 50 MiB in size.
 All the image cubes cover a sky patch of size 2x2 deg^2 with a pixel
 size of 20 arcsec and spans a frequency band of 154-162 MHz with channel
 width of 80 kHz.
@@ -230,12 +231,13 @@ The simulated sky maps of point sources are named `ptr_<freq>.fits`.
 
 Sky Maps of the EoR Signal
 --------------------------
-The *faint galaxies* simulation case released by the
+The maps of the EoR signal are created by using the data of the
+*faint galaxies* simulation case released by the
 [Evolution Of 21 cm Structure](http://homepage.sns.it/mesinger/EOS.html)
 project.
 
-1. Get the *light travel* cube in redshift range of 5-9.568
-   (`delta_T_v3_no_halos__zstart005.00000_zend009.56801_FLIPBOXES0_1024_1600Mpc_lighttravel`).
+1. Get the *light travel* cube in redshift range of 5-9.568, i.e., the file named
+   `delta_T_v3_no_halos__zstart005.00000_zend009.56801_FLIPBOXES0_1024_1600Mpc_lighttravel`.
 
 2. Convert the cube from 21cmFAST binary format to FITS format by using
    [`21cmfast_lightcone.py`](https://github.com/liweitianux/atoolbox/blob/master/astro/21cm/21cmfast_lightcone.py):
