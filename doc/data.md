@@ -19,9 +19,9 @@ are provided for download:
 * [Radio halos](../data/halos.uvcut_b158c80_n360-cube.fits)
   (md5: 1362542f19b408fdf6a62ba0b7ba2a8a)
 
-Each files is about 50 MiB in size.
+Each file is about 50 MiB in size.
 All the image cubes cover a sky patch of size 2x2 deg^2 with a pixel
-size of 20 arcsec and spans a frequency band of 154-162 MHz with channel
+size of 20 arcsec and span a frequency band of 154-162 MHz with channel
 width of 80 kHz.
 The size of image cubes is thus 360x360x101.
 
