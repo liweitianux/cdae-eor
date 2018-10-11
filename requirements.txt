@@ -3,4 +3,5 @@ jupyter
 Keras
 matplotlib
 numpy
+scipy
 tensorflow-gpu
