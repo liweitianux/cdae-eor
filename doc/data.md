@@ -7,7 +7,8 @@ the CDAE and evaluate its performance.
 
 TL;DR
 -----
-The simulated image cubes used in the paper are provided for download:
+The simulated image cubes **with realistic instrumental effects** integrated
+are provided for download:
 
 * [EoR signal](../data/eor.uvcut_b158c80_n360-cube.fits)
   (md5: bbbd03884960b967c56f05cfc6eba5ff)
@@ -23,6 +24,18 @@ All the image cubes cover a sky patch of size 2x2 deg^2 with a pixel
 size of 20 arcsec and spans a frequency band of 154-162 MHz with channel
 width of 80 kHz.
 The size of image cubes is thus 360x360x101.
+
+Also used in the paper for comparison, the **ideal skymaps** (i.e., for which
+the observational simulations are performed) are also provided:
+
+* [EoR signal (skymap)](../data/eor_b158c80_n360-cube.fits)
+  (md5: 7446c159d8c0b6964a9eead881db3995)
+* [Galactic emission (skymap)](../data/gal_b158c80_n360-cube.fits)
+  (md5: 3c67c57895653701d62e94a077b82f46)
+* [Extragalactic point sources (skymap)](../data/ptr_b158c80_n360-cube.fits)
+  (md5: f1e1e4e827ff5b6155bf5c9dbb1dd75b)
+* [Radio halos (skymap/bzipped)](../data/halos_b158c80_n360-cube.fits.bz2)
+  (md5: 7ce76b8f2c26393951f6ed05c300509f)
 
 
 Sky Maps of Foreground Components
