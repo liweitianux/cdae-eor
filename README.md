@@ -7,7 +7,7 @@ Introduction
 ------------
 This repository holds the [code](code), [data](data), and [documentation](doc)
 that are associated with the paper entitled
-[Separating the EoR Signal with a Convolutional Denoising Autoencoder: A Deep-learning-based Method](paper.pdf).
+[Separating the EoR Signal with a Convolutional Denoising Autoencoder: a Deep-learning-based Method](paper.pdf).
 
 
 Guides
@@ -15,8 +15,7 @@ Guides
 1. [Installation](doc/installation.md)
 2. [Data simulation](doc/data.md)
 3. [EoR signal separation with a CDAE](code/cdae.ipynb)
-4. [Data preprocessing without Fourier Transform](code/cdae-noft.ipynb)
-5. [Polynomial fitting method](code/polyfit.ipynb)
+4. [Polynomial fitting method](code/polyfit.ipynb)
 
 
 License
