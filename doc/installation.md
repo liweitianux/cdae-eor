@@ -37,6 +37,9 @@ and EoR signal separation.
     ```sh
     $ git clone https://github.com/casacore/casacore
     $ cd casacore
+    # Checkout the v2.4.1, which has been tested with OSKAR.
+    # (the latest master as of 2018-10-30 causes error in building OSKAR)
+    $ git checkout v2.4.1
     $ mkdir build && cd build
     $ cmake .. \
           -DCMAKE_INSTALL_PREFIX=$HOME/local/casacore \
@@ -54,6 +57,7 @@ and EoR signal separation.
     ```sh
     $ git clone https://github.com/OxfordSKA/OSKAR oskar
     $ cd oskar
+    $ git checkout 2.7.0
     $ mkdir build && cd build
     $ cmake .. \
           -DCMAKE_INSTALL_PREFIX=$HOME/local/oskar \
