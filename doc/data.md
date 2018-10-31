@@ -60,10 +60,12 @@ obtain the necessary template maps.
    [`get-healpix-patch`](https://github.com/liweitianux/fg21sim/blob/master/bin/get-healpix-patch):
 
     ```sh
-    $ get-healpix-patch --smooth --center 0,-27 --size 1800,1800 \
+    $ get-healpix-patch --smooth --center 0,-27 \
+          --size 1800,1800 --pixelsize 20 \
           haslam408_dsds_Remazeilles2014_ns512.fits \
           haslam408_eor0_fov10.fits
-    $ get-healpix-patch --smooth --center 0,-27 --size 1800,1800 \
+    $ get-healpix-patch --smooth --center 0,-27 \
+          --size 1800,1800 --pixelsize 20 \
           synchrotron_specind2_ns512.fits \
           specindex_eor0_fov10.fits
     ```
@@ -121,10 +123,12 @@ The simulated sky maps are named `gsyn_<freq>.fits`.
 1. Extract the template patch from the all-sky HEALPix template:
 
     ```sh
-    $ get-healpix-patch --smooth --center 0,-27 --size 1800,1800 \
+    $ get-healpix-patch --smooth --center 0,-27 \
+          --size 1800,1800 --pixelsize 20 \
           Halpha_fwhm06_ns1024.fits \
           halpha_eor0_fov10.fits
-    $ get-healpix-patch --smooth --center 0,-27 --size 1800,1800 \
+    $ get-healpix-patch --smooth --center 0,-27 \
+          --size 1800,1800 --pixelsize 20 \
           SFD_i100_ns1024.fits \
           SFD_eor0_fov10.fits
     ```
