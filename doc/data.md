@@ -52,15 +52,19 @@ obtain the necessary template maps.
 
 ### A. Galactic synchrotron emission
 
+0. Get the template data (see this [data](https://github.com/liweitianux/fg21sim/blob/master/docs/data.rst) page for more details):
+   - [`haslam408_dsds_Remazeilles2014_ns512.fits.xz`](https://github.com/liweitianux/fg21sim/raw/master/data/haslam408_dsds_Remazeilles2014_ns512.fits.xz)
+   - [`synchrotron_specind2_ns512.fits.xz`](https://github.com/liweitianux/fg21sim/raw/master/data/synchrotron_specind2_ns512.fits.xz)
+
 1. Extract the template patch from the all-sky HEALPix template by using
    [`get-healpix-patch`](https://github.com/liweitianux/fg21sim/blob/master/bin/get-healpix-patch):
 
     ```sh
     $ get-healpix-patch --smooth --center 0,-27 --size 1800,1800 \
-          haslam408_dsds_Remazeilles2014_ns2048.fits \
+          haslam408_dsds_Remazeilles2014_ns512.fits \
           haslam408_eor0_fov10.fits
     $ get-healpix-patch --smooth --center 0,-27 --size 1800,1800 \
-          GsyncSpectralIndex_Giardino2002_ns2048.fits \
+          synchrotron_specind2_ns512.fits \
           specindex_eor0_fov10.fits
     ```
 
@@ -109,6 +113,10 @@ The simulated sky maps are named `gsyn_<freq>.fits`.
 
 
 ### B. Galactic free-free emission
+
+0. Get the template data (see this [data](https://github.com/liweitianux/fg21sim/blob/master/docs/data.rst) page for more details):
+   - [`Halpha_fwhm06_ns1024.fits.xz`](https://github.com/liweitianux/fg21sim/raw/master/data/Halpha_fwhm06_ns1024.fits.xz)
+   - [`SFD_i100_ns1024.fits.xz`](https://github.com/liweitianux/fg21sim/raw/master/data/SFD_i100_ns1024.fits.xz)
 
 1. Extract the template patch from the all-sky HEALPix template:
 
