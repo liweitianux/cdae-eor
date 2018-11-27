@@ -329,6 +329,10 @@ the simulated SKA images.
      done
    ```
 
+   (NOTE: replace the contents of `<???>` above to match your own case.
+   The same substitution rule applies to some of the commands below as
+   well.)
+
    For the Galactic emission, the sky maps of synchrotron and free-free
    emissions are combined before converting to the OSKAR sky models.
 
@@ -424,7 +428,7 @@ the simulated SKA images.
    # Get the average beam size of the images among the frequency band
    $ beamsize *-????-image.fits
    $ for f in *-????-image.fits; do \
-         jybeam2k.py -b <beamsize> ${f} ${f%.fits}K.fits; \
+         jybeam2k.py -b <beamsize_avg> ${f} ${f%.fits}K.fits; \
      done
    ```
 
