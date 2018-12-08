@@ -46,8 +46,7 @@ and EoR signal separation.
           -DUSE_OPENMP=ON \
           -DUSE_THREADS=ON \
           -DUSE_FFTW3=ON \
-          -DUSE_HDF5=ON \
-          -DBUILD_PYTHON=ON
+          -DUSE_HDF5=ON
     $ make
     $ make install
     ```
@@ -75,6 +74,7 @@ and EoR signal separation.
     ```sh
     $ git clone https://git.code.sf.net/p/wsclean/code wsclean-code
     $ cd wsclean-code/wsclean
+    $ git checkout wsclean2.6
     $ mkdir build && cd build
     $ cmake .. \
           -DCMAKE_INSTALL_PREFIX=$HOME/local/wsclean \
