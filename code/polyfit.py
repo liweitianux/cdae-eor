@@ -7,8 +7,6 @@
 # 
 # ### Weitian LI
 # 
-# * Created: 2018-08-24
-# * Updated: 2018-10-11
 # * https://github.com/liweitianux/cdae-eor
 
 # ---
@@ -80,24 +78,19 @@ for k, v in [("font.family",       "Inconsolata"),
 # In[4]:
 
 
-def rms(a):
-    return np.sqrt(np.mean(a**2))
+def rms(a, axis=None):
+    return np.sqrt(np.mean(a**2, axis=axis))
 
 
 # In[5]:
 
 
-def a_summary(a, p=False):
+def a_summary(a):
     print('min:', np.min(a))
     print('max:', np.max(a))
     print('mean:', np.mean(a))
     print('std:', np.std(a))
     print('median:', np.median(a))
-    if p:
-        q = (1, 5, 10, 25, 75, 90, 95, 99)
-        p = np.percentile(a, q=q)
-        for i, v in zip(q, p):
-            print(f'q{i}:', v)
 
 
 # In[6]:
@@ -127,7 +120,7 @@ def plot_cubes(rpix, cubes, show_diff=True):
         if diff_:
             ax_ = ax.twinx()
             for ix, iy in zip(rx, ry):
-                ax_.plot(x_[:-1], np.abs(np.diff(data_[:, iy, ix])) * 1e3, lw=1, alpha=0.7)
+                ax_.plot(x_[:-1], np.diff(data_[:, iy, ix]) * 1e3, lw=1, alpha=0.7)
 
     for (ir, ic) in [(0, 0), (1, 0)]:
         ax = axes[ir, ic]
