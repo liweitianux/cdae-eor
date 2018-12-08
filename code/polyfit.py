@@ -27,7 +27,7 @@
 # 
 # ## 1. Import packages and basic settings
 
-# In[1]:
+# In[2]:
 
 
 import os
@@ -40,7 +40,7 @@ from astropy.io import fits
 from numpy.polynomial.polynomial import polyfit, polyval
 
 
-# In[2]:
+# In[3]:
 
 
 import matplotlib as mpl
@@ -49,7 +49,7 @@ import matplotlib.pyplot as plt
 get_ipython().run_line_magic('matplotlib', 'inline')
 
 
-# In[3]:
+# In[4]:
 
 
 mpl.style.use("ggplot")
@@ -75,14 +75,14 @@ for k, v in [("font.family",       "Inconsolata"),
 # 
 # ## 2. Custom functions
 
-# In[4]:
+# In[5]:
 
 
 def rms(a, axis=None):
     return np.sqrt(np.mean(a**2, axis=axis))
 
 
-# In[5]:
+# In[6]:
 
 
 def a_summary(a):
@@ -93,47 +93,7 @@ def a_summary(a):
     print('median:', np.median(a))
 
 
-# In[6]:
-
-
-def plot_cubes(rpix, cubes, show_diff=True):
-    nfreq0, ny, nx = cubes[0].shape
-    x_ = range(nfreq0)
-    ry = rpix // ny
-    rx = rpix % ny
-    spec = [
-        (0, 0, 'EoR', cubes[0], False),
-        (0, 1, 'Galactic', cubes[1], show_diff),
-        (1, 0, 'Halos', cubes[2], show_diff),
-        (1, 1, 'PointSources', cubes[3], show_diff),
-    ]
-    
-    fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(14, 12))
-
-    for (ir, ic, t_, data_, diff_) in spec:
-        if data_ is None:
-            continue
-        ax = axes[ir, ic]
-        ax.set_title(t_)
-        for ix, iy in zip(rx, ry):
-            ax.plot(x_, data_[:, iy, ix] * 1e3, lw=2.5)
-        if diff_:
-            ax_ = ax.twinx()
-            for ix, iy in zip(rx, ry):
-                ax_.plot(x_[:-1], np.diff(data_[:, iy, ix]) * 1e3, lw=1, alpha=0.7)
-
-    for (ir, ic) in [(0, 0), (1, 0)]:
-        ax = axes[ir, ic]
-        ax.set_ylabel('<brightness> [mK]')
-    for (ir, ic) in [(1, 0), (1, 1)]:
-        ax = axes[ir, ic]
-        ax.set_xlabel('<frequency channel>')
-
-    plt.tight_layout()
-    plt.show()
-
-
-# In[7]:
+# In[8]:
 
 
 # correlation coefficient
@@ -154,7 +114,7 @@ def corrcoef_ds(ds1, ds2):
     return cc
 
 
-# In[8]:
+# In[9]:
 
 
 def fit_foreground(freqs, data, degree=2):
@@ -163,7 +123,7 @@ def fit_foreground(freqs, data, degree=2):
     return np.swapaxes(polyval(freqs, pfit), 0, 1)
 
 
-# In[9]:
+# In[10]:
 
 
 def plot_fitresult(rpix, xfit, xout, xinput, xlabel):
@@ -185,52 +145,63 @@ def plot_fitresult(rpix, xfit, xout, xinput, xlabel):
 # 
 # ## 3. Load simulated data
 
-# In[10]:
+# In[13]:
 
 
 # directory to the simulated cubes
 datadir = '../data'
+datadir = path.expanduser('~/works/eor-detection/oskar')
 
-cube_eor   = fits.open(path.join(datadir, 'eor.uvcut_b158c80_n360-cube.fits'  ))[0].data
-cube_gal   = fits.open(path.join(datadir, 'gal.uvcut_b158c80_n360-cube.fits'  ))[0].data
-cube_halos = fits.open(path.join(datadir, 'halos.uvcut_b158c80_n360-cube.fits'))[0].data
-cube_ptr   = fits.open(path.join(datadir, 'ptr.uvcut_b158c80_n360-cube.fits'  ))[0].data
-
-
-# In[11]:
-
-
-cube_fg  = cube_gal + cube_halos + cube_ptr
-cube_tot = cube_fg + cube_eor
+cube_eor = fits.open(path.join(datadir, 'eor.uvcut.sft_b158c80_n360-cube.fits'))[0].data
+cube_fg  = fits.open(path.join(datadir, 'fg.uvcut.sft_b158c80_n360-cube.fits' ))[0].data
 
 rms(cube_eor)*1e3, rms(cube_fg)
-
-
-# In[12]:
-
-
-nfreq, ny, nx = cube_eor.shape
-npix = nx * ny
-
-nfreq, ny, nx, npix
-
-
-# In[13]:
-
-
-np.random.seed(42)
-
-rpix = np.random.randint(0, high=npix, size=3)
-ry = rpix // ny
-rx = rpix % ny
-
-rpix
 
 
 # In[14]:
 
 
-plot_cubes(rpix, (cube_eor, cube_gal, cube_halos, cube_ptr))
+nfreq, ny, nx = cube_eor.shape
+npix = nx * ny
+np.random.seed(42)
+rpix = np.random.randint(0, high=npix, size=3)
+ry = rpix // ny
+rx = rpix % ny
+
+nfreq, ny, nx, npix, rpix
+
+
+# In[16]:
+
+
+f = np.linspace(154, 162, num=nfreq)
+fmid = (f[1:] + f[:-1]) / 2
+fig, (ax0, ax1) = plt.subplots(ncols=2, figsize=(12, 5))
+
+ax = ax0
+eor_rms = rms(cube_eor, axis=(1,2)) * 1e3  # mK
+ax.plot(f, eor_rms, lw=2.5, label='rms')
+ax.legend()
+ax.set(xlabel='Frequency [MHz]', ylabel='Tb [mK]', title='EoR')
+ax_ = ax.twinx()
+ax_.plot(fmid, np.diff(eor_rms), color='C1', label='diff')
+ax_.legend()
+ax_.set(ylabel='diff(Tb) [mK]')
+ax_.grid(False)
+
+ax = ax1
+fg_rms = rms(cube_fg, axis=(1,2))
+ax.plot(f, fg_rms, lw=2.5, label='rms')
+ax.legend()
+ax.set(xlabel='Frequency [MHz]', ylabel='Tb [K]', title='Foreground')
+ax_ = ax.twinx()
+ax_.plot(fmid, np.diff(fg_rms)*1e3, color='C1', label='diff')
+ax_.legend()
+ax_.set(ylabel='diff(Tb) [mK]')
+ax_.grid(False)
+
+fig.tight_layout()
+plt.show()
 
 
 # ---
