@@ -30,12 +30,8 @@ the observational simulations are performed) are also provided:
 
 * [EoR signal (skymap)](../data/eor_b158c80_n360-cube.fits)
   (md5: 7446c159d8c0b6964a9eead881db3995)
-* [Galactic emission (skymap)](../data/gal_b158c80_n360-cube.fits)
-  (md5: 3c67c57895653701d62e94a077b82f46)
-* [Extragalactic point sources (skymap)](../data/ptr_b158c80_n360-cube.fits)
-  (md5: f1e1e4e827ff5b6155bf5c9dbb1dd75b)
-* [Radio halos (skymap/bzipped)](../data/halos_b158c80_n360-cube.fits.bz2)
-  (md5: 7ce76b8f2c26393951f6ed05c300509f)
+* [Foreground emission (skymap)](../data/fg_b158c80_n360-cube.fits)
+  (md5: 913ef156017749785e24e21c146d201f)
 
 
 Sky Maps of Foreground Components
