@@ -93,7 +93,7 @@ def a_summary(a):
     print('median:', np.median(a))
 
 
-# In[8]:
+# In[33]:
 
 
 # correlation coefficient
@@ -111,6 +111,15 @@ def corrcoef_ds(ds1, ds2):
     cc = np.zeros((n,))
     for i in range(n):
         cc[i] = corrcoef(ds1[i, :], ds2[i, :])
+    return cc
+
+
+def corrcoef_freqpix(fparray1, fparray2):
+    # shape: [nfreq, npix]
+    __, npix = fparray1.shape
+    cc = np.zeros((npix,))
+    for i in range(npix):
+        cc[i] = corrcoef(fparray1[:, i], fparray2[:, i])
     return cc
 
 
@@ -158,29 +167,25 @@ cube_fg  = fits.open(path.join(datadir, 'fg.uvcut.sft_b158c80_n360-cube.fits' ))
 rms(cube_eor)*1e3, rms(cube_fg)
 
 
-# In[14]:
+# In[17]:
 
 
 nfreq, ny, nx = cube_eor.shape
 npix = nx * ny
-np.random.seed(42)
-rpix = np.random.randint(0, high=npix, size=3)
-ry = rpix // ny
-rx = rpix % ny
+freqs = np.linspace(154, 162, nfreq)
+fmid = (freqs[1:] + freqs[:-1]) / 2
 
-nfreq, ny, nx, npix, rpix
+nfreq, ny, nx, npix
 
 
-# In[16]:
+# In[18]:
 
 
-f = np.linspace(154, 162, num=nfreq)
-fmid = (f[1:] + f[:-1]) / 2
 fig, (ax0, ax1) = plt.subplots(ncols=2, figsize=(12, 5))
 
 ax = ax0
 eor_rms = rms(cube_eor, axis=(1,2)) * 1e3  # mK
-ax.plot(f, eor_rms, lw=2.5, label='rms')
+ax.plot(freqs, eor_rms, lw=2.5, label='rms')
 ax.legend()
 ax.set(xlabel='Frequency [MHz]', ylabel='Tb [mK]', title='EoR')
 ax_ = ax.twinx()
@@ -191,7 +196,7 @@ ax_.grid(False)
 
 ax = ax1
 fg_rms = rms(cube_fg, axis=(1,2))
-ax.plot(f, fg_rms, lw=2.5, label='rms')
+ax.plot(freqs, fg_rms, lw=2.5, label='rms')
 ax.legend()
 ax.set(xlabel='Frequency [MHz]', ylabel='Tb [K]', title='Foreground')
 ax_ = ax.twinx()
@@ -208,10 +213,8 @@ plt.show()
 # 
 # ## 4. Results
 
-# In[15]:
+# In[25]:
 
-
-freqs = np.linspace(154, 162, nfreq)
 
 x_input = np.array(cube_tot.reshape((nfreq, npix)))
 x_input -= np.mean(x_input, axis=0, keepdims=True)
@@ -222,7 +225,7 @@ x_label -= np.mean(x_label, axis=0, keepdims=True)
 x_label /= np.std(x_label, axis=0, keepdims=True)
 
 
-# In[16]:
+# In[26]:
 
 
 degree = 4  # polynomial degree (quartic)
@@ -233,16 +236,11 @@ x_out = x_input - x_fgfit
 x_out -= np.mean(x_out, axis=0, keepdims=True)
 x_out /= np.std(x_out, axis=0, keepdims=True)
 
-
-# In[17]:
-
-
-cc = corrcoef_ds(x_out, x_label)
-
+cc = corrcoef_freqpix(x_out, x_label)
 print('rho: %.4f +/- %.4f' % (cc.mean(), cc.std()))
 
 
-# In[18]:
+# In[27]:
 
 
 plot_fitresult(rpix, x_fgfit, x_out, x_input, x_label)
