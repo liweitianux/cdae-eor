@@ -374,7 +374,7 @@ the simulated SKA images.
    [telescope]
    aperture_array/array_pattern/enable=true
    aperture_array/element_pattern/dipole_length=0.5
-   input_directory=telescopes/ska1low.tm
+   input_directory=ska1low.tm
    aperture_array/element_pattern/dipole_length_units=Wavelengths
    aperture_array/element_pattern/functional_type=Dipole
    pol_mode=Scalar
@@ -387,13 +387,13 @@ the simulated SKA images.
    phase_centre_dec_deg=-27.0
    start_time_utc=2000-01-01T06:30:00.000
    length=21600.0
-   num_time_steps=72
+   num_time_steps=144
    num_channels=1
    start_frequency_hz=
 
    [interferometer]
    uv_filter_max=max
-   time_average_sec=300.0
+   time_average_sec=150.0
    uv_filter_units=Wavelengths
    channel_bandwidth_hz=80000.0
    uv_filter_min=min
@@ -441,4 +441,12 @@ the simulated SKA images.
    $ fitscube.py crop -n 360 \
          -i <prefix>_cube.fits \
          -o <prefix>_n360_cube.fits
+   ```
+
+8. Add foreground components together:
+
+   ```sh
+   $ fitscube.py add \
+         -o fg_n360_cube.fits
+         -i <prefix1>_cube.fits ... \
    ```
