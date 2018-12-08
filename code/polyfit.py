@@ -27,7 +27,7 @@
 # 
 # ## 1. Import packages and basic settings
 
-# In[2]:
+# In[34]:
 
 
 import os
@@ -40,7 +40,7 @@ from astropy.io import fits
 from numpy.polynomial.polynomial import polyfit, polyval
 
 
-# In[3]:
+# In[35]:
 
 
 import matplotlib as mpl
@@ -49,7 +49,7 @@ import matplotlib.pyplot as plt
 get_ipython().run_line_magic('matplotlib', 'inline')
 
 
-# In[4]:
+# In[36]:
 
 
 mpl.style.use("ggplot")
@@ -75,14 +75,14 @@ for k, v in [("font.family",       "Inconsolata"),
 # 
 # ## 2. Custom functions
 
-# In[5]:
+# In[37]:
 
 
 def rms(a, axis=None):
     return np.sqrt(np.mean(a**2, axis=axis))
 
 
-# In[6]:
+# In[38]:
 
 
 def a_summary(a):
@@ -93,7 +93,7 @@ def a_summary(a):
     print('median:', np.median(a))
 
 
-# In[33]:
+# In[39]:
 
 
 # correlation coefficient
@@ -123,7 +123,7 @@ def corrcoef_freqpix(fparray1, fparray2):
     return cc
 
 
-# In[9]:
+# In[40]:
 
 
 def fit_foreground(freqs, data, degree=2):
@@ -132,7 +132,7 @@ def fit_foreground(freqs, data, degree=2):
     return np.swapaxes(polyval(freqs, pfit), 0, 1)
 
 
-# In[10]:
+# In[41]:
 
 
 def plot_fitresult(rpix, xfit, xout, xinput, xlabel):
@@ -154,7 +154,7 @@ def plot_fitresult(rpix, xfit, xout, xinput, xlabel):
 # 
 # ## 3. Load simulated data
 
-# In[13]:
+# In[42]:
 
 
 # directory to the simulated cubes
@@ -167,7 +167,7 @@ cube_fg  = fits.open(path.join(datadir, 'fg.uvcut.sft_b158c80_n360-cube.fits' ))
 rms(cube_eor)*1e3, rms(cube_fg)
 
 
-# In[17]:
+# In[43]:
 
 
 nfreq, ny, nx = cube_eor.shape
@@ -178,7 +178,7 @@ fmid = (freqs[1:] + freqs[:-1]) / 2
 nfreq, ny, nx, npix
 
 
-# In[18]:
+# In[44]:
 
 
 fig, (ax0, ax1) = plt.subplots(ncols=2, figsize=(12, 5))
@@ -213,34 +213,27 @@ plt.show()
 # 
 # ## 4. Results
 
-# In[25]:
+# In[45]:
 
+
+cube_tot = cube_fg + cube_eor
 
 x_input = np.array(cube_tot.reshape((nfreq, npix)))
-x_input -= np.mean(x_input, axis=0, keepdims=True)
-x_input /= np.std(x_input, axis=0, keepdims=True)
-
 x_label = np.array(cube_eor.reshape((nfreq, npix)))
-x_label -= np.mean(x_label, axis=0, keepdims=True)
-x_label /= np.std(x_label, axis=0, keepdims=True)
 
 
-# In[26]:
+# In[46]:
 
 
 degree = 4  # polynomial degree (quartic)
 x_fgfit = fit_foreground(freqs, x_input, degree)
-
-# separated EoR signal
 x_out = x_input - x_fgfit
-x_out -= np.mean(x_out, axis=0, keepdims=True)
-x_out /= np.std(x_out, axis=0, keepdims=True)
 
 cc = corrcoef_freqpix(x_out, x_label)
 print('rho: %.4f +/- %.4f' % (cc.mean(), cc.std()))
 
 
-# In[27]:
+# In[47]:
 
 
 plot_fitresult(rpix, x_fgfit, x_out, x_input, x_label)
