@@ -7,17 +7,17 @@ the CDAE and evaluate its performance.
 
 TL;DR
 -----
-The simulated image cubes **with realistic instrumental effects** integrated
-are provided for download:
+Two sets of simulated image cubes **with realistic instrumental effects**
+integrated are provided for download:
 
-* [EoR signal](../data/eor.uvcut_b158c80_n360-cube.fits)
-  (md5: bbbd03884960b967c56f05cfc6eba5ff)
-* [Galactic emission](../data/gal.uvcut_b158c80_n360-cube.fits)
-  (md5: 58663064963d0ee480a1a2d96094e351)
-* [Extragalactic point sources](../data/ptr.uvcut_b158c80_n360-cube.fits)
-  (md5: fae3216eb477e873f37935c26de10bcc)
-* [Radio halos](../data/halos.uvcut_b158c80_n360-cube.fits)
-  (md5: 1362542f19b408fdf6a62ba0b7ba2a8a)
+* [EoR signal (1)](../data/eor.uvcut_b158c80_n360-cube.fits)
+  (md5: `bbbd03884960b967c56f05cfc6eba5ff`)
+* [EoR signal (2)](../data/eor.uvcut.sft_b158c80_n360-cube.fits)
+  (md5: `4ae28b8820765c2100da0b06fae9cbbc`)
+* [Foreground emission (1)](../data/fg.uvcut_b158c80_n360-cube.fits)
+  (md5: `634ca459edaf3fda6b861c0463850c76`)
+* [Foreground emission (2)](../data/fg.uvcut.sft_b158c80_n360-cube.fits)
+  (md5: `f7bb9ec96f3455e486dc09c7b8225165`)
 
 Each file is about 50 MiB in size.
 All the image cubes cover a sky patch of size 2x2 deg^2 with a pixel
@@ -29,9 +29,9 @@ Also used in the paper for comparison, the **ideal skymaps** (i.e., for which
 the observational simulations are performed) are also provided:
 
 * [EoR signal (skymap)](../data/eor_b158c80_n360-cube.fits)
-  (md5: 7446c159d8c0b6964a9eead881db3995)
+  (md5: `7446c159d8c0b6964a9eead881db3995`)
 * [Foreground emission (skymap)](../data/fg_b158c80_n360-cube.fits)
-  (md5: 913ef156017749785e24e21c146d201f)
+  (md5: `913ef156017749785e24e21c146d201f`)
 
 
 Sky Maps of Foreground Components
