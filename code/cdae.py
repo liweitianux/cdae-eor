@@ -92,6 +92,7 @@ import keras
 from keras import backend as K
 from keras.models import Sequential
 from keras.layers import BatchNormalization, Conv1D
+from keras.layers import MaxPool1D, UpSampling1D
 from keras.optimizers import Adam
 
 keras.__version__, tf.__version__
@@ -723,8 +724,14 @@ if False:
 now = datetime.now().strftime('%Y%m%dT%H%M')
 modelfile = f'cdae.{now}.hdf5'
 
-model.save(modelfile)
+modelfit.model.save(modelfile)
 print(f'Saved model to file: {path.abspath(modelfile)}')
+
+
+# In[ ]:
+
+
+weights = modelfit.model.get_weights()
 
 
 # In[ ]:
@@ -782,121 +789,245 @@ if False:
 
 
 # ---
-# ---
 # 
-# ## 6. Comparison: Without FT
+# ## 6. Comparisons
 
-# In[51]:
+# ## 6.1. With pooling layers
 
-
-x_data  = np.swapaxes(np.array(cube_tot.reshape((nfreq0, npix))), 0, 1)
-x_label = np.swapaxes(np.array(cube_eor.reshape((nfreq0, npix))), 0, 1)
-
-x_data  -= np.mean(x_data,  axis=1, keepdims=True)
-x_label -= np.mean(x_label, axis=1, keepdims=True)
-
-_std = np.std(x_data)
-print(f'std(x_data): {_std}')
-x_data /= _std
-
-_max = np.max(np.abs(x_label))
-print(f'max(abs(x_label)): {_max}')
-x_label /= _max
+# In[74]:
 
 
-# In[52]:
+try:
+    del model1
+except NameError:
+    pass
+else:
+    K.clear_session()
+
+model1 = Sequential()
+
+model1.add(Conv1D(32, 3, activation=f_act, padding=padding, kernel_initializer=init_method,
+                  input_shape=x_train.shape[1:]))
+model1.add(BatchNormalization())
+model1.add(Conv1D(64, 3, activation=f_act, padding=padding, kernel_initializer=init_method))
+model1.add(MaxPool1D(2, padding=padding))
+model1.add(BatchNormalization())
+model1.add(Conv1D(64, 3, activation=f_act, padding=padding, kernel_initializer=init_method))
+model1.add(MaxPool1D(2, padding=padding))
+model1.add(BatchNormalization())
+model1.add(Conv1D(32, 3, activation=f_act, padding=padding, kernel_initializer=init_method))
+
+model1.add(BatchNormalization())
+model1.add(Conv1D(32, 3, activation=f_act, padding=padding, kernel_initializer=init_method))
+model1.add(UpSampling1D(2))
+model1.add(BatchNormalization())
+model1.add(Conv1D(64, 3, activation=f_act, padding=padding, kernel_initializer=init_method))
+model1.add(UpSampling1D(2))
+model1.add(BatchNormalization())
+model1.add(Conv1D(64, 3, activation=f_act, padding=padding, kernel_initializer=init_method))
+model1.add(BatchNormalization())
+model1.add(Conv1D(32, 3, activation=f_act, padding=padding, kernel_initializer=init_method))
+
+model1.add(BatchNormalization())
+model1.add(Conv1D( 1, 3, activation='tanh', padding='valid'))
+
+model1.summary()
 
 
-np.random.seed(42)
-
-idx = np.arange(npix)
-np.random.shuffle(idx)
+# In[75]:
 
 
-# In[53]:
+modelfit1 = ModelFit(
+    model1,
+    train_data=(x_train, x_train_label),
+    val_data=(x_validate, x_validate_label),
+    test_data=(x_test, x_test_label),
+    lr=1e-5,
+)
 
 
-frac_validate, frac_test = 0.2, 0.2
-n_validate = int(npix * frac_validate)
-n_test = int(npix * frac_test)
-n_train = npix - n_validate - n_test
-print(f'n_train={n_train}, n_validate={n_validate}, n_test={n_test}')
-    
-idx_validate = idx[:n_validate]
-idx_test = idx[n_validate:n_validate+n_test]
-idx_train = idx[-n_train:]
-    
-x_train = x_data[idx_train, :, np.newaxis]
-x_train_label = x_label[idx_train, :, np.newaxis]
-
-x_validate = x_data[idx_validate, :, np.newaxis]
-x_validate_label = x_label[idx_validate, :, np.newaxis]
-
-x_test = x_data[idx_test, :, np.newaxis]
-x_test_label = x_label[idx_test, :, np.newaxis]
+# In[76]:
 
 
-# In[56]:
+modelfit1.fit(epochs=50)
 
 
-del model
-K.clear_session()
+# In[78]:
 
 
-# In[57]:
-
-
-model = Sequential()
-
-model.add(Conv1D(32, 3, activation=f_act, padding=padding, kernel_initializer=init_method,
-                 input_shape=x_train.shape[1:]))
-model.add(BatchNormalization())
-model.add(Conv1D(64, 3, activation=f_act, padding=padding, kernel_initializer=init_method))
-model.add(BatchNormalization())
-model.add(Conv1D(64, 3, activation=f_act, padding=padding, kernel_initializer=init_method))
-model.add(BatchNormalization())
-model.add(Conv1D(32, 3, activation=f_act, padding=padding, kernel_initializer=init_method))
-model.add(BatchNormalization())
-
-model.add(Conv1D(32, 3, activation=f_act, padding=padding, kernel_initializer=init_method))
-model.add(BatchNormalization())
-model.add(Conv1D(64, 3, activation=f_act, padding=padding, kernel_initializer=init_method))
-model.add(BatchNormalization())
-model.add(Conv1D(64, 3, activation=f_act, padding=padding, kernel_initializer=init_method))
-model.add(BatchNormalization())
-model.add(Conv1D(32, 3, activation=f_act, padding=padding, kernel_initializer=init_method))
-model.add(BatchNormalization())
-
-model.add(Conv1D( 1, 3, activation='tanh', padding=padding))
+fig, axes = plot_modelfit(modelfit1, figsize=(9, 6))
+if False:
+    fn = 'cdae-train-pooling.pdf'
+    fig.savefig(fn)
+    print('figure saved to file: %s' % path.abspath(fn))
 
 
 # In[ ]:
 
 
-cb_index = EvalIndexCallback(func=corrcoef, test_data=(x_test, x_test_label))
-model.compile(optimizer=optimizer, loss=loss)
-model.fit(x_train, x_train_label,
-          epochs=epochs, batch_size=batch_size,
-          validation_data=(x_validate, x_validate_label),
-          callbacks=[cb_index],
-          verbose=0)
+model1 = modelfit1.model
+weights1 = model1.get_weights()
 
 
-# In[59]:
+# In[ ]:
 
 
-fig, axes = plot_modelfit(model, cb_index, figsize=(9, 6))
+now = datetime.now().strftime('%Y%m%dT%H%M')
+modelfile = f'cdae.pooling.{now}.hdf5'
+modelfit2.model.save(modelfile)
+print(f'Saved model to file: {path.abspath(modelfile)}')
 
+
+# In[79]:
+
+
+x_test_pred1 = model1.predict(x_test)
+cc1_test = corrcoef_ds(x_test_pred1[:, :, 0], x_test_label[:, :, 0])
+a_summary(cc1_test)
+
+
+# ## 6.2. Without Fourier Transform
+
+# In[81]:
+
+
+def preprocess_ds_noft(cube_tot, cube_eor, q=(1, 99)):
+    nf, ny, nx = cube_tot.shape
+    x_data  = np.swapaxes(np.array(cube_tot.reshape((nf, ny*nx))), 0, 1)
+    x_label = np.swapaxes(np.array(cube_eor.reshape((nf, ny*nx))), 0, 1)
+    if nf % 2 == 1:
+        # Make the number of frequencies even to avoid hacking the paddings.
+        x_data  = x_data [:, :-1]
+        x_label = x_label[:, :-1]
+
+    x_data -= np.mean(x_data, axis=1, keepdims=True)
+    x_data /= np.std(x_data)
+    
+    x_label -= np.mean(x_label, axis=1, keepdims=True)
+    vlow, vhigh = np.percentile(x_label, q=q)
+    x_label[x_label < vlow]  = vlow
+    x_label[x_label > vhigh] = vhigh
+    x_label /= max(abs(vlow), abs(vhigh))
+    
+    return (x_data, x_label)
+
+
+# In[82]:
+
+
+x2_data, x2_label      = preprocess_ds_noft(cube_tot,  cube_eor)
+x2_test, x2_test_label = preprocess_ds_noft(cube_tot2, cube_eor2)
+
+x2_train          = x2_data [idx_train,    :, np.newaxis]
+x2_train_label    = x2_label[idx_train,    :, np.newaxis]
+x2_validate       = x2_data [idx_validate, :, np.newaxis]
+x2_validate_label = x2_label[idx_validate, :, np.newaxis]
+
+x2_test = x2_test[:, :, np.newaxis]
+x2_test_label = x2_test_label[:, :, np.newaxis]
+
+x2_train.shape, x2_validate.shape, x2_test.shape
+
+
+# In[84]:
+
+
+try:
+    del model2
+except NameError:
+    pass
+else:
+    K.clear_session()
+
+model2 = Sequential()
+
+model2.add(Conv1D(32, 3, activation=f_act, padding=padding, kernel_initializer=init_method,
+                  input_shape=x2_train.shape[1:]))
+model2.add(BatchNormalization())
+model2.add(Conv1D(64, 3, activation=f_act, padding=padding, kernel_initializer=init_method))
+model2.add(BatchNormalization())
+model2.add(Conv1D(64, 3, activation=f_act, padding=padding, kernel_initializer=init_method))
+model2.add(BatchNormalization())
+model2.add(Conv1D(32, 3, activation=f_act, padding=padding, kernel_initializer=init_method))
+
+model2.add(BatchNormalization())
+model2.add(Conv1D(32, 3, activation=f_act, padding=padding, kernel_initializer=init_method))
+model2.add(BatchNormalization())
+model2.add(Conv1D(64, 3, activation=f_act, padding=padding, kernel_initializer=init_method))
+model2.add(BatchNormalization())
+model2.add(Conv1D(64, 3, activation=f_act, padding=padding, kernel_initializer=init_method))
+model2.add(BatchNormalization())
+model2.add(Conv1D(32, 3, activation=f_act, padding=padding, kernel_initializer=init_method))
+
+model2.add(BatchNormalization())
+model2.add(Conv1D( 1, 3, activation='tanh', padding=padding))
+
+
+# In[88]:
+
+
+modelfit2 = ModelFit(
+    model2,
+    train_data=(x2_train, x2_train_label),
+    val_data=(x2_validate, x2_validate_label),
+    test_data=(x2_test, x2_test_label),
+    lr=1e-5,
+)
+
+
+# In[89]:
+
+
+modelfit2.fit(epochs=50)
+
+
+# In[91]:
+
+
+fig, axes = plot_modelfit(modelfit2, figsize=(9, 6))
 if False:
     fn = 'cdae-train-noft.pdf'
     fig.savefig(fn)
     print('figure saved to file: %s' % path.abspath(fn))
 
 
-# In[60]:
+# In[94]:
 
 
-x_test_pred = model.predict(x_test)
-cc_test = corrcoef_ds(x_test_pred[:, :, 0], x_test_label[:, :, 0])
-a_summary(cc_test)
+x2_test_pred2 = model2.predict(x2_test)
+cc2_test = corrcoef_ds(x2_test_pred2[:, :, 0], x2_test_label[:, :, 0])
+a_summary(cc2_test)
+
+
+# In[95]:
+
+
+modelfit2.fit(epochs=20)
+
+
+# In[96]:
+
+
+fig, axes = plot_modelfit(modelfit2, figsize=(9, 6))
+
+
+# In[97]:
+
+
+modelfit2.fit(epochs=30)
+
+
+# In[98]:
+
+
+fig, axes = plot_modelfit(modelfit2, figsize=(9, 6))
+
+
+# In[ ]:
+
+
+now = datetime.now().strftime('%Y%m%dT%H%M')
+modelfile = f'cdae.noft.{now}.hdf5'
+modelfit2.model.save(modelfile)
+print(f'Saved model to file: {path.abspath(modelfile)}')
 
