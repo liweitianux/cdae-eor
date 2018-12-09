@@ -157,9 +157,7 @@ def plot_fitresult(rpix, xfit, xout, xinput, xlabel):
 # In[42]:
 
 
-# directory to the simulated cubes
 datadir = '../data'
-
 cube_eor = fits.open(path.join(datadir, 'eor.uvcut.sft_b158c80_n360-cube.fits'))[0].data
 cube_fg  = fits.open(path.join(datadir, 'fg.uvcut.sft_b158c80_n360-cube.fits' ))[0].data
 
@@ -177,7 +175,7 @@ fmid = (freqs[1:] + freqs[:-1]) / 2
 nfreq, ny, nx, npix
 
 
-# In[44]:
+# In[50]:
 
 
 fig, (ax0, ax1) = plt.subplots(ncols=2, figsize=(12, 5))
@@ -187,11 +185,6 @@ eor_rms = rms(cube_eor, axis=(1,2)) * 1e3  # mK
 ax.plot(freqs, eor_rms, lw=2.5, label='rms')
 ax.legend()
 ax.set(xlabel='Frequency [MHz]', ylabel='Tb [mK]', title='EoR')
-ax_ = ax.twinx()
-ax_.plot(fmid, np.diff(eor_rms), color='C1', label='diff')
-ax_.legend()
-ax_.set(ylabel='diff(Tb) [mK]')
-ax_.grid(False)
 
 ax = ax1
 fg_rms = rms(cube_fg, axis=(1,2))
