@@ -413,57 +413,6 @@ def plot_modelresult(idx, xinput, xlabel, xpred, figsize=(8, 8)):
     return fig, (ax0, ax1)
 
 
-# In[20]:
-
-
-def plot_simudata(rpix, cube, skycube, figsize=(8, 12)):
-    nf, ny, nx = cube.shape
-    f = np.linspace(154, 162, nf)
-    f2 = (f[1:] + f[:-1]) / 2
-    ry = rpix // ny
-    rx = rpix % ny
-
-    fig, (ax0, ax1) = plt.subplots(nrows=2, figsize=figsize, sharex=True)
-
-    xlabel = 'Frequency [MHz]'
-    ylabel = 'Brightness temperature [K]'
-    ylabel2 = 'Brightness difference [mK]'
-    ax0.set(ylabel=ylabel,
-            title='(a) No instrument observation')
-    ax0_ = ax0.twinx()
-    ax0_.set_ylabel(ylabel2)
-    ax0_.grid(False)
-    
-    ax1.set(xlabel=xlabel, ylabel=ylabel,
-            title='(b) With instrument observation')
-    ax1_ = ax1.twinx()
-    ax1_.set_ylabel(ylabel2)
-    ax1_.grid(False)
-    
-    y = skycube[:, ry, rx]
-    ax0.plot(f, y, color='C1', lw=2.5, label='spectrum')
-    y2 = (np.diff(y)) * 1e3  # [mK]
-    ax0_.plot(f2, y2, color='C0', lw=1, alpha=0.7, label='spectrum (diff.)')
-    
-    y = cube[:, ry, rx]
-    y = np.abs(y)
-    ax1.plot(f, y, color='C1', lw=2.5, label='spectrum')
-    y2 = (np.diff(y)) * 1e3  # [mK]
-    ax1_.plot(f2, y2, color='C0', lw=1, alpha=0.7, label='spectrum (diff.)')
-    
-    h1, l1 = ax0.get_legend_handles_labels()
-    h2, l2 = ax0_.get_legend_handles_labels()
-    ax0.legend(h1+h2, l1+l2, ncol=2, loc='upper right')
-    
-    h1, l1 = ax1.get_legend_handles_labels()
-    h2, l2 = ax1_.get_legend_handles_labels()
-    ax1.legend(h1+h2, l1+l2, ncol=2, loc='upper right')
-    
-    plt.tight_layout()
-    plt.show()
-    return fig, (ax0, ax1)
-
-
 # ---
 # 
 # ## 3. Load data
@@ -521,38 +470,102 @@ def plot_cubes(cube_eor, cube_fg):
 plot_cubes(cube_eor, cube_fg)
 
 
-# In[25]:
+# In[17]:
 
 
-nfreq0, ny, nx = cube_eor.shape
-npix = nx * ny
+def plot_simudata(cube, skycube, figsize=(8, 12)):
+    nf, ny, nx = cube.shape
+    f = np.linspace(154, 162, nf)
+    f2 = (f[1:] + f[:-1]) / 2
 
-nfreq0, ny, nx, npix
+    fig, (ax0, ax1) = plt.subplots(nrows=2, figsize=figsize, sharex=True)
+
+    xlabel = 'Frequency [MHz]'
+    ylabel = 'Tb [K]'
+    ylabel2 = 'diff(Tb) [mK]'
+    ax0.set(ylabel=ylabel,
+            title='(a) No instrument observation')
+    ax0_ = ax0.twinx()
+    ax0_.set_ylabel(ylabel2)
+    ax0_.grid(False)
+    
+    ax1.set(xlabel=xlabel, ylabel=ylabel,
+            title='(b) With instrument observation')
+    ax1_ = ax1.twinx()
+    ax1_.set_ylabel(ylabel2)
+    ax1_.grid(False)
+    
+    y = rms(skycube, axis=(1,2))
+    ax0.plot(f, y, color='C1', lw=2.5, label='rms')
+    y2 = np.diff(y) * 1e3  # [mK]
+    ax0_.plot(f2, y2, color='C0', lw=1, alpha=0.7, label='rms (diff.)')
+    
+    y = rms(cube, axis=(1,2))
+    y = np.abs(y)
+    ax1.plot(f, y, color='C1', lw=2.5, label='rms')
+    y2 = np.diff(y) * 1e3  # [mK]
+    ax1_.plot(f2, y2, color='C0', lw=1, alpha=0.7, label='rms (diff.)')
+    
+    h1, l1 = ax0.get_legend_handles_labels()
+    h2, l2 = ax0_.get_legend_handles_labels()
+    ax0.legend(h1+h2, l1+l2, ncol=2, loc='upper right')
+    
+    h1, l1 = ax1.get_legend_handles_labels()
+    h2, l2 = ax1_.get_legend_handles_labels()
+    ax1.legend(h1+h2, l1+l2, ncol=2, loc='upper right')
+    
+    plt.tight_layout()
+    plt.show()
+    return fig, (ax0, ax1)
 
 
-# In[26]:
-
-
-np.random.seed(42)
-rpix = np.random.randint(0, high=npix, size=3)
-
-
-# In[31]:
-
-
-fig, axes = plot_simudata(rpix[0], cube_fg, skycube_fg, figsize=(8, 8))
-
+fig, axes = plot_simudata(cube_fg, skycube_fg, figsize=(8, 8))
 if False:
     fn = 'simudata.pdf'
     fig.savefig(fn)
     print('figure saved to file: %s' % path.abspath(fn))
 
 
+# In[16]:
+
+
+def plot_slice(cube_eor, cube_fg, i=50, figsize=(14, 6.5)):
+    fig, (ax0, ax1) = plt.subplots(ncols=2, figsize=figsize)
+
+    ax = ax0
+    slc_eor = cube_eor[i, :, :]
+    nx, ny = slc_eor.shape
+    mappable = ax.pcolormesh(np.arange(nx), np.arange(ny), slc_eor*1e3, cmap='jet')
+    vmin, vmax = mappable.get_clim()
+    cb = ax.figure.colorbar(mappable, ax=ax, pad=0.02, aspect=30)
+    cb.ax.set_xlabel('[mK]')
+    ax.set(title='EoR signal', xlabel='[pixel]', ylabel='[pixel]')
+
+    ax = ax1
+    slc_fg = cube_fg[i, :, :]
+    nx, ny = slc_fg.shape
+    mappable = ax.pcolormesh(np.arange(nx), np.arange(ny), slc_fg, cmap='jet')
+    vmin, vmax = mappable.get_clim()
+    cb = ax.figure.colorbar(mappable, ax=ax, pad=0.02, aspect=30)
+    cb.ax.set_xlabel('[K]')
+    ax.set(title='Foreground emission', xlabel='[pixel]', ylabel='[pixel]')
+
+    fig.tight_layout()
+    fig.subplots_adjust(wspace=0.1)
+    plt.show()
+    return (fig, (ax0, ax1))
+
+
+fig, axes = plot_slice(cube_eor, cube_fg)
+if False:
+    fn = 'obsimg-158.png'
+    fig.savefig(fn, dpi=120)
+    print(f'image saved to: {path.abspath(fn)}')
+
+
 # ---
 # 
 # ## 4. Preprocessing
-
-# ### 4.1. Fourier Transform (FT)
 
 # In[33]:
 
@@ -579,8 +592,6 @@ npix, nfreq = zen_eor.shape
 npix, nfreq
 
 
-# ### 4.2. Normalization
-
 # In[36]:
 
 
@@ -603,23 +614,13 @@ x_label[x_label > vhigh] = vhigh
 x_label /= max(abs(vlow), abs(vhigh))
 
 
-# In[38]:
+# In[25]:
 
 
-# rescale the 'xinput' (that is input to the model) to match
-# the scale of the labeled data (i.e., the model output),
-# for the purpose of data visualization.
+nfreq0, ny, nx = cube_eor.shape
+npix = nx * ny
 
-def rescale2label_factory(x_mean=x_mean, x_std=x_std, label_vlow=vlow, label_vhigh=vhigh):
-    def f(xinput):
-        x2 = xinput * x_std + x_mean
-        vm = max(abs(label_vlow), abs(label_vhigh))
-        return x2 / vm
-    
-    return f
-
-
-rescale2label = rescale2label_factory()
+nfreq0, ny, nx, npix
 
 
 # ---
