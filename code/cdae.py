@@ -517,7 +517,7 @@ if False:
     print('figure saved to file: %s' % path.abspath(fn))
 
 
-# In[16]:
+# In[113]:
 
 
 def plot_slice(cube_eor, cube_fg, i=50, figsize=(14, 6.5)):
@@ -548,10 +548,10 @@ def plot_slice(cube_eor, cube_fg, i=50, figsize=(14, 6.5)):
 
 
 fig, axes = plot_slice(cube_eor, cube_fg)
-if False:
+if True:
     fn = 'obsimg-158.png'
     fig.savefig(fn, dpi=120)
-    print(f'image saved to: {path.abspath(fn)}')
+    print(f'figure saved to: {path.abspath(fn)}')
 
 
 # ---
@@ -646,7 +646,7 @@ init_method = 'he_uniform'
 padding = 'same'
 
 
-# In[45]:
+# In[102]:
 
 
 try:
@@ -684,7 +684,7 @@ model.summary()
 
 # ### 5.3. Training
 
-# In[46]:
+# In[103]:
 
 
 modelfit = ModelFit(
@@ -696,19 +696,13 @@ modelfit = ModelFit(
 )
 
 
-# In[47]:
+# In[104]:
 
 
 modelfit.fit(epochs=50)
 
 
-# In[57]:
-
-
-model = modelfit.model
-
-
-# In[54]:
+# In[105]:
 
 
 fig, axes = plot_modelfit(modelfit, figsize=(9, 6))
@@ -718,20 +712,20 @@ if False:
     print('figure saved to file: %s' % path.abspath(fn))
 
 
-# In[ ]:
+# In[106]:
+
+
+model = modelfit.model
+weights = model.get_weights()
+
+
+# In[107]:
 
 
 now = datetime.now().strftime('%Y%m%dT%H%M')
 modelfile = f'cdae.{now}.hdf5'
-
 modelfit.model.save(modelfile)
 print(f'Saved model to file: {path.abspath(modelfile)}')
-
-
-# In[ ]:
-
-
-weights = modelfit.model.get_weights()
 
 
 # In[ ]:
@@ -743,7 +737,7 @@ model = keras.models.load_model(modelfile)
 
 # ### 5.4. Results
 
-# In[58]:
+# In[108]:
 
 
 x_test_pred = model.predict(x_test)
@@ -751,7 +745,7 @@ cc_test = corrcoef_ds(x_test_pred[:, :, 0], x_test_label[:, :, 0])
 a_summary(cc_test)
 
 
-# In[59]:
+# In[109]:
 
 
 zde_test_label = rfft_decode2(x_test_label[:, :, 0], nex=nex)
@@ -776,6 +770,16 @@ a_summary(pr)
 n_test = x_test.shape[0]
 tpix = np.random.randint(0, n_test, size=1)[0]
 tpix
+
+
+# In[110]:
+
+
+fig, axes = plot_modelresult(tpix, x_test, x_test_label, x_test_pred, nex=nex)
+if False:
+    fn = 'eor-result.pdf'
+    fig.savefig(fn)
+    print('figure saved to file: %s' % path.abspath(fn))
 
 
 # In[71]:
@@ -985,10 +989,6 @@ modelfit2.fit(epochs=50)
 
 
 fig, axes = plot_modelfit(modelfit2, figsize=(9, 6))
-if False:
-    fn = 'cdae-train-noft.pdf'
-    fig.savefig(fn)
-    print('figure saved to file: %s' % path.abspath(fn))
 
 
 # In[94]:
@@ -1017,10 +1017,14 @@ fig, axes = plot_modelfit(modelfit2, figsize=(9, 6))
 modelfit2.fit(epochs=30)
 
 
-# In[98]:
+# In[111]:
 
 
 fig, axes = plot_modelfit(modelfit2, figsize=(9, 6))
+if True:
+    fn = 'cdae-train-noft.pdf'
+    fig.savefig(fn)
+    print('figure saved to file: %s' % path.abspath(fn))
 
 
 # In[ ]:
