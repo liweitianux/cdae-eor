@@ -7,7 +7,7 @@
 # 
 # ### Weitian LI
 # 
-# * https://github.com/liweitianux/cdae-eor
+# https://github.com/liweitianux/cdae-eor
 
 # ---
 # 
@@ -141,9 +141,9 @@ def plot_fitresult(rpix, xfit, xout, xinput, xlabel):
     fig, (ax0, ax1) = plt.subplots(ncols=2, figsize=(12, 6))
 
     for i, r in enumerate(rpix):
-        ax0.plot(freqs, xfit[:, r], color=f'C{i}', alpha=0.7, lw=2)
+        ax0.plot(freqs, xfit[:, r],   color=f'C{i}', alpha=0.7, lw=2)
         ax0.plot(freqs, xinput[:, r], color=f'C{i}', alpha=0.7, lw=1.5, ls='--')
-        ax1.plot(freqs, xout[:, r], color=f'C{i}', alpha=0.7, lw=2)
+        ax1.plot(freqs, xout[:, r],   color=f'C{i}', alpha=0.7, lw=2)
         ax1.plot(freqs, xlabel[:, r], color=f'C{i}', alpha=0.7, lw=1.5, ls='--')
 
     plt.tight_layout()
@@ -152,14 +152,13 @@ def plot_fitresult(rpix, xfit, xout, xinput, xlabel):
 
 # ---
 # 
-# ## 3. Load simulated data
+# ## 3. Load data
 
 # In[42]:
 
 
 # directory to the simulated cubes
 datadir = '../data'
-datadir = path.expanduser('~/works/eor-detection/oskar')
 
 cube_eor = fits.open(path.join(datadir, 'eor.uvcut.sft_b158c80_n360-cube.fits'))[0].data
 cube_fg  = fits.open(path.join(datadir, 'fg.uvcut.sft_b158c80_n360-cube.fits' ))[0].data
