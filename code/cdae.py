@@ -712,15 +712,20 @@ if False:
     print('figure saved to file: %s' % path.abspath(fn))
 
 
-# In[106]:
+# In[115]:
 
 
 model = modelfit.model
+
+# Save model in variables
+model_arch = model.to_json()
 weights = model.get_weights()
 
 
 # In[107]:
 
+
+# Save model to file
 
 now = datetime.now().strftime('%Y%m%dT%H%M')
 modelfile = f'cdae.{now}.hdf5'
@@ -731,6 +736,19 @@ print(f'Saved model to file: {path.abspath(modelfile)}')
 # In[ ]:
 
 
+# Recover model from variables
+
+K.clear_session()
+model = keras.models.model_from_json(model_arch)
+model.set_weights(weights)
+
+
+# In[ ]:
+
+
+# Reload model from file
+
+K.clear_session()
 modelfile = 'eor-detection-cdae.???.hdf5'
 model = keras.models.load_model(modelfile)
 
@@ -870,11 +888,8 @@ if False:
 
 
 model1 = modelfit1.model
+model1_arch = model1.to_json()
 weights1 = model1.get_weights()
-
-
-# In[ ]:
-
 
 now = datetime.now().strftime('%Y%m%dT%H%M')
 modelfile = f'cdae.pooling.{now}.hdf5'
@@ -885,7 +900,7 @@ print(f'Saved model to file: {path.abspath(modelfile)}')
 # In[79]:
 
 
-x_test_pred1 = model1.predict(x_test)
+x_test_pred1 = modelfit1.model.predict(x_test)
 cc1_test = corrcoef_ds(x_test_pred1[:, :, 0], x_test_label[:, :, 0])
 a_summary(cc1_test)
 
@@ -1030,8 +1045,12 @@ if True:
 # In[ ]:
 
 
+model2 = modelfit2.model
+model2_arch = model2.to_json()
+weights2 = model2.get_weights()
+
 now = datetime.now().strftime('%Y%m%dT%H%M')
 modelfile = f'cdae.noft.{now}.hdf5'
-modelfit2.model.save(modelfile)
+model2.save(modelfile)
 print(f'Saved model to file: {path.abspath(modelfile)}')
 
