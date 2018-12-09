@@ -7,7 +7,7 @@
 # 
 # ### Weitian LI
 # 
-# * https://github.com/liweitianux/cdae-eor
+# https://github.com/liweitianux/cdae-eor
 # 
 # **Credits:**
 # * https://ramhiser.com/post/2018-05-14-autoencoders-with-keras/
@@ -82,7 +82,7 @@ for k, v in [("font.family",       "Inconsolata"),
     mpl.rcParams[k] = v
 
 
-# In[4]:
+# In[26]:
 
 
 import tensorflow as tf
@@ -91,21 +91,18 @@ import keras
 from keras import backend as K
 from keras.models import Sequential
 from keras.layers import BatchNormalization, Conv1D
+from keras.optimizers import Adam
+
+keras.__version__, tf.__version__
 
 
-# In[5]:
+# In[27]:
 
 
 config = tf.ConfigProto()
 config.gpu_options.allow_growth = True
 session = tf.Session(config=config)
 K.set_session(session)
-
-
-# In[6]:
-
-
-keras.__version__, tf.__version__
 
 
 # ---
@@ -214,6 +211,24 @@ def corrcoef_freqpix(fparray1, fparray2):
     for i in range(npix):
         cc[i] = corrcoef(fparray1[:, i], fparray2[:, i])
     return cc
+
+
+# In[21]:
+
+
+def normalize_ds(zen_tot, zen_eor, zen_fg, q=(1, 99)):
+    x_mean, x_std = np.mean(zen_tot), np.std(zen_tot)
+    x_data = (zen_tot - x_mean) / x_std
+    
+    x_fg = (zen_fg - x_mean) / x_std
+
+    vlow, vhigh = np.percentile(zen_eor, q=q)
+    x_label = np.array(zen_eor)
+    x_label[x_label < vlow]  = vlow
+    x_label[x_label > vhigh] = vhigh
+    x_label /= max(abs(vlow), abs(vhigh))
+    
+    return (x_data, x_label, x_fg)
 
 
 # In[14]:
@@ -567,60 +582,47 @@ if False:
 # 
 # ## 4. Preprocessing
 
-# In[33]:
+# In[18]:
 
 
-z_eor   = calc_rfft(cube_eor)
-z_tot   = calc_rfft(cube_tot)
+cube_tot  = cube_fg  + cube_eor
+cube_tot2 = cube_fg2 + cube_eor2
 
 
-# In[34]:
+# In[19]:
+
+
+z_eor  = calc_rfft(cube_eor)
+z_tot  = calc_rfft(cube_tot)
+z_fg   = calc_rfft(cube_fg)
+
+z_eor2 = calc_rfft(cube_eor2)
+z_tot2 = calc_rfft(cube_tot2)
+z_fg2  = calc_rfft(cube_fg2)
+
+
+# In[20]:
 
 
 # number of lowest Fourier coefficients to be excised
 nex = 6
 
-zen_eor   = rfft_encode2(z_eor, nex=nex)
-zen_tot   = rfft_encode2(z_tot, nex=nex)
+zen_eor  = rfft_encode2(z_eor, nex=nex)
+zen_tot  = rfft_encode2(z_tot, nex=nex)
+zen_fg   = rfft_encode2(z_fg,  nex=nex)
 
-
-# In[35]:
-
+zen_eor2 = rfft_encode2(z_eor2, nex=nex)
+zen_tot2 = rfft_encode2(z_tot2, nex=nex)
+zen_fg2  = rfft_encode2(z_fg2,  nex=nex)
 
 npix, nfreq = zen_eor.shape
 
-npix, nfreq
+
+# In[22]:
 
 
-# In[36]:
-
-
-x_mean = np.mean(zen_tot)
-x_std = np.std(zen_tot)
-
-x_data = (zen_tot - x_mean) / x_std
-
-
-# In[37]:
-
-
-x_label = np.array(zen_eor)
-
-qlow, qhigh = 1, 99
-vlow, vhigh = np.percentile(x_label, q=(qlow, qhigh))
-
-x_label[x_label < vlow]  = vlow
-x_label[x_label > vhigh] = vhigh
-x_label /= max(abs(vlow), abs(vhigh))
-
-
-# In[25]:
-
-
-nfreq0, ny, nx = cube_eor.shape
-npix = nx * ny
-
-nfreq0, ny, nx, npix
+x_data, x_label,      x_fg      = normalize_ds(zen_tot,  zen_eor,  zen_fg)
+x_test, x_test_label, x_test_fg = normalize_ds(zen_tot2, zen_eor2, zen_fg2)
 
 
 # ---
@@ -629,44 +631,47 @@ nfreq0, ny, nx, npix
 
 # ### 5.1. Dataset partition
 
-# In[39]:
+# In[23]:
 
-
-np.random.seed(42)
 
 idx = np.arange(npix)
+np.random.seed(42)
 np.random.shuffle(idx)
 
-
-# In[40]:
-
-
-frac_validate, frac_test = 0.2, 0.2
+frac_validate = 0.2
 n_validate = int(npix * frac_validate)
-n_test = int(npix * frac_test)
-n_train = npix - n_validate - n_test
-print(f'n_train={n_train}, n_validate={n_validate}, n_test={n_test}')
-    
-idx_validate = idx[:n_validate]
-idx_test = idx[n_validate:n_validate+n_test]
-idx_train = idx[-n_train:]
-    
-x_train = x_data[idx_train, :, np.newaxis]
+n_train = npix - n_validate
+
+idx_train = idx[:n_train]
+idx_validate = idx[-n_validate:]
+
+x_train       = x_data [idx_train, :, np.newaxis]
 x_train_label = x_label[idx_train, :, np.newaxis]
+x_train_fg    = x_fg   [idx_train, :, np.newaxis]
 
-x_validate = x_data[idx_validate, :, np.newaxis]
+x_validate       = x_data [idx_validate, :, np.newaxis]
 x_validate_label = x_label[idx_validate, :, np.newaxis]
+x_validate_fg    = x_fg   [idx_validate, :, np.newaxis]
 
-x_test = x_data[idx_test, :, np.newaxis]
-x_test_label = x_label[idx_test, :, np.newaxis]
+x_test       = x_test      [:, :, np.newaxis]
+x_test_label = x_test_label[:, :, np.newaxis]
+x_test_fg    = x_test_fg   [:, :, np.newaxis]
+
+[len(idx_train), len(idx_validate), x_test.shape[0]]
 
 
 # ### 5.2. Architecture
 
-# In[41]:
+# In[24]:
 
 
-# Delete existing model and clear session
+f_act = 'elu'  # exponential linear unit
+init_method = 'he_uniform'
+padding = 'same'
+
+
+# In[28]:
+
 
 try:
     del model
@@ -675,15 +680,7 @@ except NameError:
 else:
     K.clear_session()
 
-
-# In[42]:
-
-
 model = Sequential()
-
-f_act = 'elu'  # exponential linear unit
-init_method = 'he_uniform'
-padding = 'same'
 
 model.add(Conv1D(32, 3, activation=f_act, padding=padding, kernel_initializer=init_method,
                  input_shape=x_train.shape[1:]))
@@ -693,8 +690,8 @@ model.add(BatchNormalization())
 model.add(Conv1D(64, 3, activation=f_act, padding=padding, kernel_initializer=init_method))
 model.add(BatchNormalization())
 model.add(Conv1D(32, 3, activation=f_act, padding=padding, kernel_initializer=init_method))
-model.add(BatchNormalization())
 
+model.add(BatchNormalization())
 model.add(Conv1D(32, 3, activation=f_act, padding=padding, kernel_initializer=init_method))
 model.add(BatchNormalization())
 model.add(Conv1D(64, 3, activation=f_act, padding=padding, kernel_initializer=init_method))
@@ -702,12 +699,16 @@ model.add(BatchNormalization())
 model.add(Conv1D(64, 3, activation=f_act, padding=padding, kernel_initializer=init_method))
 model.add(BatchNormalization())
 model.add(Conv1D(32, 3, activation=f_act, padding=padding, kernel_initializer=init_method))
-model.add(BatchNormalization())
 
+model.add(BatchNormalization())
 model.add(Conv1D( 1, 3, activation='tanh', padding=padding))
 
 model.summary()
 
+
+# ### 5.3. Training
+# 
+# **NOTE:** requires about **4 GB** GPU memory; takes about 21 minutes on a GTX 1080Ti.
 
 # In[43]:
 
@@ -721,10 +722,6 @@ batch_size = 100
 
 cb_index = EvalIndexCallback(func=corrcoef, test_data=(x_test, x_test_label))
 
-
-# ### 5.3. Training
-# 
-# **NOTE:** requires about **4 GB** GPU memory; takes about 21 minutes on a GTX 1080Ti.
 
 # In[ ]:
 
