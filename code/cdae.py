@@ -37,12 +37,13 @@
 # 
 # ## 1. Import packages and basic settings
 
-# In[1]:
+# In[30]:
 
 
 import os
 from os import path
 from datetime import datetime
+import time
 
 import numpy as np
 from astropy.io import fits
@@ -244,135 +245,108 @@ def reset_weights(model):
             layer.kernel.initializer.run(session=session)
 
 
-# In[16]:
+# In[53]:
 
 
-# Credit: https://keunwoochoi.wordpress.com/2016/07/16/keras-callbacks/
-
-class EvalIndexCallback(keras.callbacks.Callback):
+class ModelFit:
     """
-    Calculate the evaluation index on the validation set
-    at the end of epoches.
+    Fit/train the model.  This class helps continue previous traning and plot.
     """
-    def __init__(self, func, loss_func=None, train_data=None, test_data=None):
-        super().__init__()
-        self.func = func
-        self.loss_func = loss_func
+    loss = 'mean_squared_error'
+    batch_size = 100
+    
+    def __init__(self, model, train_data, val_data, test_data=None,
+                 lr=1e-5, evalfunc=corrcoef_ds):
         self.train_data = train_data
-        self.metrics = ['mean', 'std', 'median']
-        
-        self.val_results = {'epoch': []}
-        for n in self.metrics:
-            self.val_results[n] = []
-            
+        self.val_data = val_data
         self.test_data = test_data
-        if test_data:
-            self.test_results = {'epoch': []}
-            for n in self.metrics:
-                self.test_results[n] = []
+        self.lr = lr
+        self.evalfunc = evalfunc
+        self.optimizer = Adam(lr=lr)
+        self.model = keras.models.clone_model(model)
+        self.model.compile(optimizer=self.optimizer, loss=self.loss)
         
-        if loss_func:
-            self.train_loss = {'epoch': [], 'mean': [], 'std': []}
-            self.val_loss = {'epoch': [], 'mean': [], 'std': []}
-    
-    def _predict(self):
-        data = self.validation_data[0]
-        self._x_validation_pred = self.model.predict(data)
+        # results
+        self.train_loss = []
+        self.val_loss = []
+        self.eval_val = []
+        self.eval_test = []
+        
+    def fit_once(self):
+        t0 = time.perf_counter()
+        x, y = self.train_data
+        f = self.model.fit(x, y, epochs=1, validation_data=self.val_data,
+                           batch_size=self.batch_size, verbose=0)
+        train_loss = f.history['loss'][0]
+        val_loss = f.history['val_loss'][0]
+        self.train_loss.append(train_loss)
+        self.val_loss.append(val_loss)
+        t1 = time.perf_counter() - t0
+        
+        data, label = self.val_data
+        pred = self.model.predict(data)
+        v = self.evalfunc(pred[:, :, 0], label[:, :, 0])
+        m, s = np.mean(v), np.std(v)
+        self.eval_val.append((m, s))
+        print(f'    eval[validation]: {m:.4f} +/- {s:.4f}')
+        t2 = time.perf_counter() - t0 - t1
+        
         if self.test_data:
-            data = self.test_data[0]
-            self._x_test_pred = self.model.predict(data)
-        if self.loss_func:
-            data = self.train_data[0]
-            self._x_train_pred = self.model.predict(data)
-            
-    def _calc_loss(self, epoch):
-        if self.loss_func is None:
-            return
-        
-        pred = self._x_train_pred
-        label = self.train_data[1]
-        res = self.train_loss
-        m, s = self.loss_func(pred, label)
-        res['epoch'].append(epoch)
-        res['mean'].append(m)
-        res['std'].append(s)
-        print(f'    loss[train]: {m:.4f} +/- {s:.4f}')
-        
-        pred = self._x_validation_pred
-        label = self.validation_data[1]
-        res = self.val_loss
-        m, s = self.loss_func(pred, label)
-        res['epoch'].append(epoch)
-        res['mean'].append(m)
-        res['std'].append(s)
-        print(f'    loss[validation]: {m:.4f} +/- {s:.4f}')
-        
-    def _calc_results(self, epoch, type_):
-        if type_ == 'validation':
-            res = self.val_results
-            data, label = self.validation_data[:2]
-            pred = self._x_validation_pred
-        else:
-            res = self.test_results
             data, label = self.test_data
-            pred = self._x_test_pred
+            pred = self.model.predict(data)
+            v = self.evalfunc(pred[:, :, 0], label[:, :, 0])
+            m, s = np.mean(v), np.std(v)
+            self.eval_test.append((m, s))
+            print(f'    eval[test]: {m:.4f} +/- {s:.4f}')
+            t3 = time.perf_counter() - t0 - t2
+        else:
+            t3 = 0
             
-        res['epoch'].append(epoch)
-        n = data.shape[0]
-        m = np.zeros((n,))
-        for i in range(n):
-            m[i] = self.func(pred[i, :, 0], label[i, :, 0])
-        for n in self.metrics:
-            res[n].append(getattr(np, n)(m))
-                
-    def on_epoch_end(self, epoch, logs=None):
-        # 'epoch' starts from 0
-        self._predict()
-        self._calc_loss(epoch)
+        print(f'> loss: {train_loss:.4f}, {val_loss:.4f}, // time: {t1:.1f}, {t2:.1f}, {t3:.1f}')
         
-        self._calc_results(epoch, type_='validation')
-        m = self.val_results['mean'][-1]
-        s = self.val_results['std'][-1]
-        print(f'    index[validation]: {m:.4f} +/- {s:.4f}')
-        
-        if self.test_data:
-            self._calc_results(epoch, type_='test')
-            m = self.test_results['mean'][-1]
-            s = self.test_results['std'][-1]
-            print(f'    index[test]: {m:.4f} +/- {s:.4f}')
-
-
-# In[17]:
-
-
-def plot_modelfit(model, callback, figsize=(8, 8)):
+    def fit(self, epochs):
+        istart = len(self.train_loss) + 1
+        istop = istart + epochs - 1
+        tstart = time.perf_counter()
+        for i in range(istart, istop+1):
+            print(f'*** epoch *** {i}/{istop} ***')
+            self.fit_once()
+        tstop = time.perf_counter()
+        print(f'\nElapsed time: {(tstop-tstart)/60} [min]')
+    
+    
+def plot_modelfit(modelfit, figsize=None, plot_test=False):
     fig, ax = plt.subplots(figsize=figsize)
-
-    res = callback.val_results
-    x = np.array(res['epoch']) + 1
-    y = np.array(res['mean'])
-    yerr = np.array(res['std'])
-    ax.plot(x, y, color='C5', lw=2.5, label='Correlation coef.')
-    ax.fill_between(x, y-yerr, y+yerr, color='C5', alpha=0.4)
-    ax.set(xlabel='Epoch', ylabel='Correlation coefficient')
-
-    history = model.history.history
-    n_epoch = len(history['loss'])
-    epoch = np.arange(n_epoch) + 1
-    loss = np.array(history['loss'])
-    val_loss = np.concatenate([[np.nan], np.array(history['val_loss'])[:-1]])
+        
+    x = np.arange(len(modelfit.train_loss)) + 1
+    train_loss = np.array(modelfit.train_loss)
+    val_loss = np.concatenate([[np.nan], modelfit.val_loss[:-1]])
+    ax.plot(x, train_loss, color='C0', lw=2.5, alpha=0.8, label='Training loss')
+    ax.plot(x, val_loss,   color='C1', lw=2.5, alpha=0.8, label='Validation loss')
+    ax.set(xlabel='Epoch', ylabel='Loss')
+    ax.grid(b=False, axis='y')
+        
     ax_ = ax.twinx()
-    ax_.plot(epoch, loss, color='C0', lw=2.5, alpha=0.8, label='Training loss')
-    ax_.plot(epoch, val_loss, color='C1', lw=2.5, alpha=0.8, label='Validation loss')
-    ax_.set(ylabel='MSE Loss')
-    ax_.grid(False)
-    
-    h1, l1 = ax_.get_legend_handles_labels()
-    h2, l2 = ax.get_legend_handles_labels()
-    ax.legend(h1+h2, l1+l2, loc='center right')
-    
+    ax_.set(ylabel='Correlation coefficient')
+    ax_.grid(b=True, axis='y')
+        
+    y1    = np.array([item[0] for item in modelfit.eval_val])
+    y1err = np.array([item[1] for item in modelfit.eval_val])
+    ax_.plot(x, y1, color='C1', lw=2.5, ls='--', label='Validation corr. coef.')
+    ax_.fill_between(x, y1-y1err, y1+y1err, color='C1', alpha=0.4)
+        
+    if modelfit.eval_test and plot_test:
+        y2    = np.array([item[0] for item in modelfit.eval_test])
+        y2err = np.array([item[1] for item in modelfit.eval_test])
+        ax_.plot(x, y2, color='C5', lw=2.5, ls='--', label='Test corr. coef.')
+        ax_.fill_between(x, y2-y2err, y2+y2err, color='C5', alpha=0.4)
+
     for l in ax.lines+ax_.lines:
         l.set_zorder(3)
+    
+    h1, l1 = ax.get_legend_handles_labels()
+    h2, l2 = ax_.get_legend_handles_labels()
+    ax_.legend(h1+h2, l1+l2, loc='center right')
 
     plt.tight_layout()
     plt.show()
@@ -618,7 +592,7 @@ zen_fg2  = rfft_encode2(z_fg2,  nex=nex)
 npix, nfreq = zen_eor.shape
 
 
-# In[22]:
+# In[39]:
 
 
 x_data, x_label,      x_fg      = normalize_ds(zen_tot,  zen_eor,  zen_fg)
@@ -631,7 +605,7 @@ x_test, x_test_label, x_test_fg = normalize_ds(zen_tot2, zen_eor2, zen_fg2)
 
 # ### 5.1. Dataset partition
 
-# In[23]:
+# In[40]:
 
 
 idx = np.arange(npix)
@@ -657,7 +631,7 @@ x_test       = x_test      [:, :, np.newaxis]
 x_test_label = x_test_label[:, :, np.newaxis]
 x_test_fg    = x_test_fg   [:, :, np.newaxis]
 
-[len(idx_train), len(idx_validate), x_test.shape[0]]
+[x_train.shape, x_validate.shape, x_test.shape]
 
 
 # ### 5.2. Architecture
@@ -670,7 +644,7 @@ init_method = 'he_uniform'
 padding = 'same'
 
 
-# In[28]:
+# In[45]:
 
 
 try:
@@ -707,33 +681,29 @@ model.summary()
 
 
 # ### 5.3. Training
-# 
-# **NOTE:** requires about **4 GB** GPU memory; takes about 21 minutes on a GTX 1080Ti.
 
-# In[43]:
+# In[46]:
 
 
-optimizer = 'adam'
-loss = 'mean_squared_error'
-
-epoch_sep = 1
-epochs = 100
-batch_size = 100
-
-cb_index = EvalIndexCallback(func=corrcoef, test_data=(x_test, x_test_label))
-
-
-# In[ ]:
+modelfit = ModelFit(
+    model,
+    train_data=(x_train, x_train_label),
+    val_data=(x_validate, x_validate_label),
+    test_data=(x_test, x_test_label),
+    lr=1e-5,
+)
 
 
-get_ipython().run_cell_magic('time', '', '\nmodel.compile(optimizer=optimizer, loss=loss)\nmodel.fit(x_train, x_train_label,\n          epochs=epochs, batch_size=batch_size,\n          validation_data=(x_validate, x_validate_label),\n          callbacks=[cb_index],\n          verbose=2)')
+# In[47]:
 
 
-# In[45]:
+modelfit.fit(epochs=50)
 
 
-fig, axes = plot_modelfit(model, cb_index, figsize=(9, 6))
+# In[54]:
 
+
+fig, axes = plot_modelfit(modelfit, figsize=(9, 6))
 if False:
     fn = 'cdae-train.pdf'
     fig.savefig(fn)
@@ -744,7 +714,7 @@ if False:
 
 
 now = datetime.now().strftime('%Y%m%dT%H%M')
-modelfile = f'eor-detection-cdae.{now}.hdf5'
+modelfile = f'cdae.{now}.hdf5'
 
 model.save(modelfile)
 print(f'Saved model to file: {path.abspath(modelfile)}')
