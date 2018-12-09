@@ -353,22 +353,23 @@ def plot_modelfit(modelfit, figsize=None, plot_test=False):
     return fig, (ax, ax_)
 
 
-# In[18]:
+# In[67]:
 
 
-def plot_modelresult(idx, xinput, xlabel, xpred, figsize=(8, 8)):
+def plot_modelresult(idx, xinput, xlabel, xpred, nex=6, figsize=(8, 8)):
     tinput = xinput[idx, :, 0]
     tlabel = xlabel[idx, :, 0]
-    tpred  = xpred[ idx, :, 0]
+    tpred  = xpred [idx, :, 0]
+    nf0 = len(tinput) + 2*nex - 1
 
     tinput2 = rfft_decode1(tinput, nex=nex)
     tlabel2 = rfft_decode1(tlabel, nex=nex)
     tpred2  = rfft_decode1(tpred,  nex=nex)
-    sinput = np.fft.irfft(tinput2, n=nfreq0)
-    slabel = np.fft.irfft(tlabel2, n=nfreq0)
-    spred  = np.fft.irfft(tpred2,  n=nfreq0)
-    
-    nf0 = len(slabel)
+
+    sinput = np.fft.irfft(tinput2, n=nf0)
+    slabel = np.fft.irfft(tlabel2, n=nf0)
+    spred  = np.fft.irfft(tpred2,  n=nf0)
+
     tx0 = np.linspace(154, 162, nf0)
     tx  = np.arange(nf0) - (nf0 // 2)
 
@@ -395,7 +396,7 @@ def plot_modelresult(idx, xinput, xlabel, xpred, figsize=(8, 8)):
     ax1.plot(tx0, spred,  color='C1', alpha=0.8, lw=2.5, ls='--', label='reconstructed EoR')
     ax1.legend()
     ax1.set(xlabel='Frequency [MHz]',
-            ylabel='Brightness temperature')
+            ylabel='Amplitude')
 
     plt.tight_layout()
     plt.show()
@@ -700,6 +701,12 @@ modelfit = ModelFit(
 modelfit.fit(epochs=50)
 
 
+# In[57]:
+
+
+model = modelfit.model
+
+
 # In[54]:
 
 
@@ -729,7 +736,7 @@ model = keras.models.load_model(modelfile)
 
 # ### 5.4. Results
 
-# In[46]:
+# In[58]:
 
 
 x_test_pred = model.predict(x_test)
@@ -737,25 +744,7 @@ cc_test = corrcoef_ds(x_test_pred[:, :, 0], x_test_label[:, :, 0])
 a_summary(cc_test)
 
 
-# In[48]:
-
-
-tpix = np.random.randint(0, n_test, size=1)[0]
-tpix
-
-
-# In[49]:
-
-
-fig, axes = plot_modelresult(tpix, x_test, x_test_label, x_test_pred)
-
-if False:
-    fn = 'eor-result.pdf'
-    fig.savefig(fn)
-    print('figure saved to file: %s' % path.abspath(fn))
-
-
-# In[50]:
+# In[59]:
 
 
 zde_test_label = rfft_decode2(x_test_label[:, :, 0], nex=nex)
@@ -772,6 +761,24 @@ p1_pred  = np.sum(ps1_pred,  axis=1)
 
 pr = p1_pred / p1_label
 a_summary(pr)
+
+
+# In[69]:
+
+
+n_test = x_test.shape[0]
+tpix = np.random.randint(0, n_test, size=1)[0]
+tpix
+
+
+# In[71]:
+
+
+fig, axes = plot_modelresult(tpix, x_test, x_test_label, x_test_pred, nex=nex)
+if False:
+    fn = 'eor-result.pdf'
+    fig.savefig(fn)
+    print('figure saved to file: %s' % path.abspath(fn))
 
 
 # ---
