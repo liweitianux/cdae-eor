@@ -47,6 +47,8 @@ import time
 
 import numpy as np
 from astropy.io import fits
+from astropy.cosmology import FlatLambdaCDM
+from astropy import constants as ac
 
 from scipy import signal
 from scipy import fftpack
@@ -442,7 +444,7 @@ skycube_eor = fits.open(path.join(datadir, 'eor_b158c80_n360-cube.fits'))[0].dat
 skycube_fg  = fits.open(path.join(datadir, 'fg_b158c80_n360-cube.fits' ))[0].data
 
 
-# In[14]:
+# In[132]:
 
 
 def plot_cubes(cube_eor, cube_fg):
@@ -473,7 +475,7 @@ def plot_cubes(cube_eor, cube_fg):
     plt.show()
     
     
-plot_cubes(cube_eor, cube_fg)
+plot_cubes(cube_eor2, cube_fg2)
 
 
 # In[17]:
@@ -526,13 +528,13 @@ def plot_simudata(cube, skycube, figsize=(8, 12)):
 
 
 fig, axes = plot_simudata(cube_fg, skycube_fg, figsize=(8, 8))
-if False:
+if True:
     fn = 'simudata.pdf'
     fig.savefig(fn)
     print('figure saved to file: %s' % path.abspath(fn))
 
 
-# In[113]:
+# In[134]:
 
 
 def plot_slice(cube_eor, cube_fg, i=50, figsize=(14, 6.5)):
@@ -816,6 +818,198 @@ if False:
 
 
 # ### 5.5. More results
+
+# In[138]:
+
+
+def irfft_cube(x, nex):
+    npix, nf, __ = x.shape
+    nf0 = nf + 2*nex - 1
+    n = int(npix**0.5)
+    z = rfft_decode2(x[:, :, 0], nex=nex)  # [npix, nf*]
+    y = np.fft.irfft(z, n=nf0, axis=1)  # [npix, nf0]
+    y2 = np.swapaxes(y, 0, 1)  # [nf0, npix]
+    return y2.reshape((nf0, n, n))
+
+
+def plot_slice_eor(cube_in, cube_out, i=50, figsize=(12, 6)):
+    slc_in  = cube_in[i, :, :]
+    slc_out = cube_out[i, :, :]
+    nx, ny  = slc_in.shape
+    vmin, vmax = np.min(slc_in), np.max(slc_out)
+
+    fig, axes = plt.subplots(ncols=2, figsize=figsize)
+
+    ax = axes[0]
+    mappable = ax.pcolormesh(np.arange(nx), np.arange(ny), slc_in, cmap='jet',
+                             vmin=vmin, vmax=vmax)
+    ax.set(title='Input EoR', xlabel='[pixel]', ylabel='[pixel]')
+
+    ax = axes[1]
+    mappable = ax.pcolormesh(np.arange(nx), np.arange(ny), slc_out, cmap='jet',
+                             vmin=vmin, vmax=vmax)
+    ax.set(title='Reconstructed EoR', xlabel='[pixel]')
+    ax.yaxis.set_ticklabels([])
+
+    fig.subplots_adjust(top=1, bottom=0, left=0, right=0.97, wspace=0.05)
+    
+    cax = fig.add_axes([0.98, 0.0, 0.02, 1.0])  # [left, bottom, width, height]
+    cb = fig.colorbar(mappable, cax=cax)
+    cb.ax.set_xlabel('Amplitude')
+    cb.ax.xaxis.labelpad = 30
+
+    plt.show()
+    return (fig, axes)
+
+
+# In[136]:
+
+
+cin_eor  = irfft_cube(x_test_label, nex=nex)
+cout_eor = irfft_cube(x_test_pred,  nex=nex)
+
+
+# In[141]:
+
+
+# 158 MHz image of reconstructed EoR
+
+fig, axes = plot_slice_eor(cin_eor, cout_eor)
+if True:
+    fn = 'eor-img-comp.png'
+    fig.savefig(fn, bbox_inches='tight', dpi=150)
+    print('figure saved to file: %s' % path.abspath(fn))
+
+
+# In[143]:
+
+
+def calc_ps2d(cube, fmin=154, fmax=162, fov=2):
+    f21cm = 1420.405751  # [MHz]
+    cosmo = FlatLambdaCDM(H0=71, Om0=0.27)
+    nf, ny, nx = cube.shape
+    fc = (fmin + fmax) / 2
+    zc = f21cm / fc - 1
+    DM = cosmo.comoving_transverse_distance(zc).value  # [Mpc]
+    
+    pixelsize = fov / nx  # [deg]
+    d_xy = DM * np.deg2rad(pixelsize)  # [Mpc]
+    fs_xy = 1 / d_xy  # [Mpc^-1]
+    
+    dfreq = (fmax - fmin) / (nf-1)  # [MHz]
+    c = ac.c.to("km/s").value
+    H = cosmo.H(zc).value  # [km/s/Mpc]
+    d_z = c * (1+zc)**2 * dfreq / H / f21cm  # [Mpc]
+    fs_z = 1 / d_z  # [Mpc^-1]
+    
+    cubefft = fftpack.fftshift(fftpack.fftn(cube))
+    ps3d = np.abs(cubefft) ** 2  # [K^2]
+    norm1 = 1 / (nx * ny * nf)
+    norm2 = 1 / (fs_xy**2 * fs_z)  # [Mpc^3]
+    norm3 = 1 / (2*np.pi)**3
+    ps3d *= (norm1 * norm2 * norm3)  # [K^2 Mpc^3]
+    
+    k_xy = 2*np.pi * fftpack.fftshift(fftpack.fftfreq(nx, d=d_xy))
+    k_z  = 2*np.pi * fftpack.fftshift(fftpack.fftfreq(nf, d=d_z))
+    k_perp = k_xy[k_xy >= 0]
+    k_los  = k_z [k_z  >= 0]
+    n_k_perp = len(k_perp)
+    n_k_los  = len(k_los)
+    ps2d = np.zeros(shape=(n_k_los, n_k_perp))
+
+    eps = 1e-8
+    ic_xy = (np.abs(k_xy) < eps).nonzero()[0][0]
+    ic_z  = (np.abs(k_z)  < eps).nonzero()[0][0]
+    p_xy = np.arange(nx) - ic_xy
+    p_z  = np.abs(np.arange(nf) - ic_z)
+    mx, my = np.meshgrid(p_xy, p_xy)
+    rho = np.sqrt(mx**2 + my**2)
+    rho = np.around(rho).astype(int)
+
+    for r in range(n_k_perp):
+        ix, iy = (rho == r).nonzero()
+        for s in range(n_k_los):
+            iz = (p_z == s).nonzero()[0]
+            cells = np.concatenate([ps3d[z, iy, ix] for z in iz])
+            ps2d[s, r] = cells.mean()
+            
+    return (ps2d, k_perp, k_los)
+
+
+def plot_ps2d(data, k_perp, k_los, ax,
+              colorbar=True, vmin=None, vmax=None,
+              k_perp_lim=None, k_los_lim=None):
+    # data shape: [n_k_los, n_k_perp]
+    mappable = ax.pcolormesh(k_perp[1:], k_los[1:], np.log10(data[1:, 1:]),
+                             vmin=vmin, vmax=vmax, cmap='jet')
+    k_perp_lim = k_perp_lim or (k_perp[1], k_perp[-1])
+    k_los_lim = k_los_lim or (k_los[1], k_los[-1])
+    ax.set(xscale='log', yscale='log',
+           xlim=k_perp_lim, ylim=k_los_lim,
+           xlabel=r'$k_{\perp}$ [Mpc$^{-1}$]',
+           ylabel=r'$k_{||}$ [Mpc$^{-1}$]')
+
+    cb = None
+    if colorbar:
+        # https://stackoverflow.com/a/25983372/4856091
+        def expfmt_(x, pos):
+            return '$\\mathdefault{10^{%.0f}}$' % float(x)
+        expfmt = mpl.ticker.FuncFormatter(expfmt_)
+    
+        cb = ax.figure.colorbar(mappable, ax=ax, pad=0.01, aspect=30, format=expfmt)
+        cb.ax.set_xlabel('Power')
+        cb.ax.xaxis.labelpad = 10
+        
+    return (mappable, cb)
+
+
+# In[144]:
+
+
+ps2d_in,  k_perp, k_los = calc_ps2d(cin_eor)
+ps2d_out, k_perp, k_los = calc_ps2d(cout_eor)
+
+ps2d_in.shape, k_perp.shape, k_los.shape
+
+
+# In[145]:
+
+
+k_perp_lim = (k_perp[1], k_perp[-1])
+k_los_lim  = (0.3, k_los[-1])
+
+def expfmt_(x, pos):
+    return '$\\mathdefault{10^{%.0f}}$' % float(x)
+
+fig, (ax0, ax1) = plt.subplots(ncols=2, figsize=(13, 6))
+
+plot_ps2d(ps2d_in, k_perp, k_los, colorbar=False,
+          ax=ax0, vmin=-8.5, vmax=-1.5,
+          k_perp_lim=k_perp_lim, k_los_lim=k_los_lim)
+ax0.set(title='Input EoR')
+
+mappable, __ = plot_ps2d(
+    ps2d_out, k_perp, k_los, colorbar=False,
+    ax=ax1, vmin=-8.5, vmax=-1.5,
+    k_perp_lim=k_perp_lim, k_los_lim=k_los_lim,
+)
+ax1.set(title='Reconstructed EoR', ylabel='')
+ax1.set_yticklabels([], minor=False)
+ax1.set_yticklabels([], minor=True)
+
+fig.subplots_adjust(top=1, bottom=0, left=0, right=0.97, wspace=0.05)    
+cax = fig.add_axes([0.98, 0.0, 0.02, 1.0])  # [left, bottom, width, height]
+cb = fig.colorbar(mappable, cax=cax, format=mpl.ticker.FuncFormatter(expfmt_))
+cb.ax.set_xlabel('Power')
+cb.ax.xaxis.labelpad = 10
+
+if True:
+    fn = 'eor-ps-comp.png'
+    fig.savefig(fn, bbox_inches='tight', dpi=150)
+    print('figure saved to file: %s' % path.abspath(fn))
+else:
+    plt.show()
+
 
 # ---
 # 
