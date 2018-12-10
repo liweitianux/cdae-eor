@@ -233,20 +233,7 @@ def normalize_ds(zen_tot, zen_eor, zen_fg, q=(1, 99)):
     return (x_data, x_label, x_fg)
 
 
-# In[14]:
-
-
-# Re-initialize weights
-# credit: https://www.codementor.io/nitinsurya/how-to-re-initialize-keras-model-weights-et41zre2g
-
-def reset_weights(model):
-    session = K.get_session()
-    for layer in model.layers: 
-        if hasattr(layer, 'kernel_initializer'):
-            layer.kernel.initializer.run(session=session)
-
-
-# In[53]:
+# In[130]:
 
 
 class ModelFit:
@@ -266,18 +253,36 @@ class ModelFit:
         self.optimizer = Adam(lr=lr)
         self.model = keras.models.clone_model(model)
         self.model.compile(optimizer=self.optimizer, loss=self.loss)
+        self.model_arch = self.model.to_json()
+        self.reset_weights()
         
-        # results
+        # results @ each epoch
+        self.weights = []
         self.train_loss = []
         self.val_loss = []
         self.eval_val = []
         self.eval_test = []
         
+    # Re-initialize weights
+    # Credit: https://github.com/keras-team/keras/issues/341#issuecomment-438347068
+    def reset_weights(self, model=None):
+        model = model or self.model
+        s = K.get_session()
+        for layer in model.layers:
+            if isinstance(layer, keras.engine.network.Network):
+                self.reset_weights(layer)
+                continue
+            for v in layer.__dict__.values():
+                if hasattr(v, 'initializer'):
+                    v.initializer.run(session=s)
+                
     def fit_once(self):
         t0 = time.perf_counter()
         x, y = self.train_data
         f = self.model.fit(x, y, epochs=1, validation_data=self.val_data,
                            batch_size=self.batch_size, verbose=0)
+        self.weights.append(self.model.get_weights())
+        
         train_loss = f.history['loss'][0]
         val_loss = f.history['val_loss'][0]
         self.train_loss.append(train_loss)
@@ -303,7 +308,7 @@ class ModelFit:
         else:
             t3 = 0
             
-        print(f'> loss: {train_loss:.4f}, {val_loss:.4f}, // time: {t1:.1f}, {t2:.1f}, {t3:.1f}')
+        print(f'> loss: {train_loss:.4f}, {val_loss:.4f} // time: {t1:.1f}, {t2:.1f}, {t3:.1f}')
         
     def fit(self, epochs):
         istart = len(self.train_loss) + 1
@@ -314,8 +319,18 @@ class ModelFit:
             self.fit_once()
         tstop = time.perf_counter()
         print(f'\nElapsed time: {(tstop-tstart)/60} [min]')
-    
-    
+        
+    def gen_model(self, epoch):
+        weights = self.weights[epoch-1]
+        model = keras.models.model_from_json(self.model_arch)
+        model.compile(optimizer=self.optimizer, loss=self.loss)
+        model.set_weights(weights)
+        return model
+
+
+# In[131]:
+
+
 def plot_modelfit(modelfit, figsize=None, plot_test=False):
     fig, ax = plt.subplots(figsize=figsize)
         
@@ -646,7 +661,7 @@ init_method = 'he_uniform'
 padding = 'same'
 
 
-# In[102]:
+# In[118]:
 
 
 try:
@@ -684,7 +699,7 @@ model.summary()
 
 # ### 5.3. Training
 
-# In[103]:
+# In[119]:
 
 
 modelfit = ModelFit(
@@ -696,23 +711,23 @@ modelfit = ModelFit(
 )
 
 
-# In[104]:
+# In[120]:
 
 
 modelfit.fit(epochs=50)
 
 
-# In[105]:
+# In[121]:
 
 
 fig, axes = plot_modelfit(modelfit, figsize=(9, 6))
-if False:
+if True:
     fn = 'cdae-train.pdf'
     fig.savefig(fn)
     print('figure saved to file: %s' % path.abspath(fn))
 
 
-# In[115]:
+# In[122]:
 
 
 model = modelfit.model
@@ -722,7 +737,7 @@ model_arch = model.to_json()
 weights = model.get_weights()
 
 
-# In[107]:
+# In[123]:
 
 
 # Save model to file
@@ -755,7 +770,7 @@ model = keras.models.load_model(modelfile)
 
 # ### 5.4. Results
 
-# In[108]:
+# In[124]:
 
 
 x_test_pred = model.predict(x_test)
@@ -763,7 +778,7 @@ cc_test = corrcoef_ds(x_test_pred[:, :, 0], x_test_label[:, :, 0])
 a_summary(cc_test)
 
 
-# In[109]:
+# In[125]:
 
 
 zde_test_label = rfft_decode2(x_test_label[:, :, 0], nex=nex)
@@ -790,7 +805,7 @@ tpix = np.random.randint(0, n_test, size=1)[0]
 tpix
 
 
-# In[110]:
+# In[128]:
 
 
 fig, axes = plot_modelresult(tpix, x_test, x_test_label, x_test_pred, nex=nex)
@@ -800,15 +815,7 @@ if False:
     print('figure saved to file: %s' % path.abspath(fn))
 
 
-# In[71]:
-
-
-fig, axes = plot_modelresult(tpix, x_test, x_test_label, x_test_pred, nex=nex)
-if False:
-    fn = 'eor-result.pdf'
-    fig.savefig(fn)
-    print('figure saved to file: %s' % path.abspath(fn))
-
+# ### 5.5. More results
 
 # ---
 # 
