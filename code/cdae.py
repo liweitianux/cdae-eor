@@ -37,7 +37,7 @@
 # 
 # ## 1. Import packages and basic settings
 
-# In[30]:
+# In[1]:
 
 
 import os
@@ -85,7 +85,7 @@ for k, v in [("font.family",       "Inconsolata"),
     mpl.rcParams[k] = v
 
 
-# In[26]:
+# In[4]:
 
 
 import tensorflow as tf
@@ -100,7 +100,7 @@ from keras.optimizers import Adam
 keras.__version__, tf.__version__
 
 
-# In[27]:
+# In[5]:
 
 
 config = tf.ConfigProto()
@@ -113,14 +113,14 @@ K.set_session(session)
 # 
 # ## 2. Custom functions
 
-# In[12]:
+# In[6]:
 
 
 def rms(a, axis=None):
     return np.sqrt(np.mean(a**2, axis=axis))
 
 
-# In[13]:
+# In[7]:
 
 
 def a_summary(a):
@@ -131,7 +131,7 @@ def a_summary(a):
     print('median:', np.median(a))
 
 
-# In[6]:
+# In[8]:
 
 
 def calc_rfft(cube):
@@ -146,7 +146,7 @@ def calc_rfft(cube):
     return np.fft.rfft(data, axis=1)
 
 
-# In[7]:
+# In[9]:
 
 
 # Parameters:
@@ -166,7 +166,7 @@ def rfft_decode1(s, nex=0):
     return np.concatenate([np.zeros((nex,)), x])
 
 
-# In[8]:
+# In[10]:
 
 
 # Parameters:
@@ -187,7 +187,7 @@ def rfft_decode2(s, nex=0):
     return np.column_stack([np.zeros((npix, nex)), x])
 
 
-# In[9]:
+# In[11]:
 
 
 # correlation coefficient
@@ -217,7 +217,7 @@ def corrcoef_freqpix(fparray1, fparray2):
     return cc
 
 
-# In[21]:
+# In[12]:
 
 
 def normalize_ds(zen_tot, zen_eor, zen_fg, q=(1, 99)):
@@ -235,7 +235,7 @@ def normalize_ds(zen_tot, zen_eor, zen_fg, q=(1, 99)):
     return (x_data, x_label, x_fg)
 
 
-# In[130]:
+# In[13]:
 
 
 class ModelFit:
@@ -243,14 +243,14 @@ class ModelFit:
     Fit/train the model.  This class helps continue previous traning and plot.
     """
     loss = 'mean_squared_error'
-    batch_size = 100
     
     def __init__(self, model, train_data, val_data, test_data=None,
-                 lr=1e-5, evalfunc=corrcoef_ds):
+                 lr=1e-5, batch_size=100, evalfunc=corrcoef_ds):
         self.train_data = train_data
         self.val_data = val_data
         self.test_data = test_data
         self.lr = lr
+        self.batch_size = batch_size
         self.evalfunc = evalfunc
         self.optimizer = Adam(lr=lr)
         self.model = keras.models.clone_model(model)
@@ -330,7 +330,7 @@ class ModelFit:
         return model
 
 
-# In[131]:
+# In[14]:
 
 
 def plot_modelfit(modelfit, figsize=None, plot_test=False):
@@ -371,7 +371,7 @@ def plot_modelfit(modelfit, figsize=None, plot_test=False):
     return fig, (ax, ax_)
 
 
-# In[67]:
+# In[15]:
 
 
 def plot_modelresult(idx, xinput, xlabel, xpred, nex=6, figsize=(8, 8)):
@@ -425,7 +425,7 @@ def plot_modelresult(idx, xinput, xlabel, xpred, nex=6, figsize=(8, 8)):
 # 
 # ## 3. Load data
 
-# In[10]:
+# In[16]:
 
 
 # datadir = '../data'
@@ -611,7 +611,7 @@ zen_fg2  = rfft_encode2(z_fg2,  nex=nex)
 npix, nfreq = zen_eor.shape
 
 
-# In[39]:
+# In[21]:
 
 
 x_data, x_label,      x_fg      = normalize_ds(zen_tot,  zen_eor,  zen_fg)
@@ -624,7 +624,7 @@ x_test, x_test_label, x_test_fg = normalize_ds(zen_tot2, zen_eor2, zen_fg2)
 
 # ### 5.1. Dataset partition
 
-# In[40]:
+# In[22]:
 
 
 idx = np.arange(npix)
@@ -739,7 +739,7 @@ model_arch = model.to_json()
 weights = model.get_weights()
 
 
-# In[123]:
+# In[153]:
 
 
 # Save model to file
@@ -819,7 +819,7 @@ if False:
 
 # ### 5.5. More results
 
-# In[138]:
+# In[17]:
 
 
 def irfft_cube(x, nex):
@@ -1009,6 +1009,59 @@ if True:
     print('figure saved to file: %s' % path.abspath(fn))
 else:
     plt.show()
+
+
+# ### 5.6. Structures explanation
+# 
+# * Small ripples in the reconstructed EoR image
+# * The bright stripe in the 2D power spectrum
+
+# In[23]:
+
+
+cin_fg = irfft_cube(x_test_fg, nex=nex)
+slcin_fg = cin_fg[50, :, :]
+ftin_fg = np.fft.fftshift(np.fft.fft2(slcin_fg))
+
+fig, (ax0, ax1) = plt.subplots(ncols=2, figsize=(12, 6))
+ax0.imshow(slcin_fg)
+ax1.imshow(np.log10(np.abs(ftin_fg)**2))
+fig.tight_layout()
+plt.show()
+
+
+# In[24]:
+
+
+slc_fg = cube_fg2[50, :, :]
+ft_fg = np.fft.fftshift(np.fft.fft2(slc_fg))
+
+fig, (ax0, ax1) = plt.subplots(ncols=2, figsize=(12, 6))
+ax0.imshow(slc_fg)
+ax1.imshow(np.log10(np.abs(ft_fg)**2))
+fig.tight_layout()
+plt.show()
+
+
+# In[26]:
+
+
+nfreq0 = cube_fg2.shape[0]
+window = signal.nuttall(nfreq0, sym=False)
+cw_fg2 = cube_fg2 * window[:, np.newaxis, np.newaxis]
+rft_fg2 = np.fft.rfft(cw_fg2, axis=0)
+
+rft_fg2[:nex, :, :] = 0
+cw2_fg2 = np.fft.irfft(rft_fg2, n=nfreq0, axis=0)
+
+slc_fg2 = cw2_fg2[50, :, :]
+ft_fg2 = np.fft.fftshift(np.fft.fft2(slc_fg2))
+
+fig, (ax0, ax1) = plt.subplots(ncols=2, figsize=(12, 6))
+ax0.imshow(slc_fg2)
+ax1.imshow(np.log10(np.abs(ft_fg2)**2))
+fig.tight_layout()
+plt.show()
 
 
 # ---
