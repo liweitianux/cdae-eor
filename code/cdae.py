@@ -760,13 +760,13 @@ model = keras.models.model_from_json(model_arch)
 model.set_weights(weights)
 
 
-# In[ ]:
+# In[28]:
 
 
 # Reload model from file
 
 K.clear_session()
-modelfile = 'eor-detection-cdae.???.hdf5'
+modelfile = 'cdae.20181212T1847.hdf5'
 model = keras.models.load_model(modelfile)
 
 
@@ -1307,4 +1307,254 @@ now = datetime.now().strftime('%Y%m%dT%H%M')
 modelfile = f'cdae.noft.{now}.hdf5'
 model2.save(modelfile)
 print(f'Saved model to file: {path.abspath(modelfile)}')
+
+
+# ---
+# 
+# ## 7. Visualization & Explanation
+# 
+# **Occlusion sensitivity**:
+# [Visualizing and Understanding Convolutional Networks](https://arxiv.org/abs/1311.2901)
+# 
+# **NOTE**: Use the trained model (`modelfit`) from [**Section 5.3**](#5.3.-Training).
+
+# In[147]:
+
+
+plot_modelfit(modelfit)
+plt.show()
+
+
+# In[150]:
+
+
+def gen_mask(x, w=3, len=nfreq):
+    mask = np.ones((len,), dtype=int)
+    x1 = max(0, x-w//2)
+    x2 = min(len, x1+w)
+    mask[x1:x2] = 0
+    return mask[np.newaxis, :, np.newaxis]
+
+
+def occlusion_test(modelfit, epoch, w=3, dataset=(x_validate, x_validate_label)):
+    data, label = dataset
+    npix, nfreq, __ = data.shape
+    
+    model = modelfit.gen_model(epoch)
+    pred = model.predict(data)
+    cc0 = corrcoef_ds(pred[:, :, 0], label[:, :, 0])
+    cc0_mean, cc0_std = np.mean(cc0), np.std(cc0)
+    print('cc0 = %.1f%% +/- %.1f%%' % (cc0_mean*100, cc0_std*100))
+    
+    cc_mean = np.zeros((nfreq,))
+    cc_std = np.zeros((nfreq,))
+    print(f'[{nfreq}]...', end='', flush=True)
+    for i in range(nfreq):
+        print(f'{i+1}..', end='', flush=True)
+        mask = gen_mask(i, w=w, len=nfreq)
+        x_input = data * mask
+        x_output = model.predict(x_input)
+        cc = corrcoef_ds(x_output[:, :, 0], label[:, :, 0])
+        cc_mean[i] = np.mean(cc)
+        cc_std[i] = np.std(cc)
+    print('done!')
+
+    return {
+        'cc0_mean': cc0_mean,
+        'cc0_std': cc0_std,
+        'cc_mean': cc_mean,
+        'cc_std': cc_std,
+        'dcc_mean': cc0_mean - cc_mean,
+        'dcc_std': np.sqrt(cc_std**2 - cc0_std**2),
+    }
+
+
+# In[151]:
+
+
+nepoch = len(modelfit.weights)
+occ_results = {}
+t0 = time.perf_counter()
+
+for e in range(1, nepoch+1):
+    print(f'====== [epoch {e} / {nepoch}] ======')
+    t1 = time.perf_counter()
+    occ_results[e] = occlusion_test(modelfit, epoch=e, dataset=(x_validate, x_validate_label))
+    t = (time.perf_counter() - t1) / 60
+    print(f'Elapsed time: {t:.1f} min')
+    
+t = (time.perf_counter() - t0) / 60
+print(f'\nTotal elapsed time: {t:.1f} min')
+
+
+# In[152]:
+
+
+import pickle
+fn = 'occ_results.20181211.pkl'
+pickle.dump(occ_results, open(fn, 'wb'))
+print(f'Saved to file: {path.abspath(fn)}')
+
+
+# In[27]:
+
+
+import pickle
+fn = 'occ_results.20181211.pkl'
+occ_results = pickle.load(open(fn, 'rb'))
+
+
+# In[30]:
+
+
+x_validate_pred = model.predict(x_validate)
+cc_validate = corrcoef_ds(x_validate_pred[:, :, 0], x_validate_label[:, :, 0])
+a_summary(cc_validate)
+
+
+# In[42]:
+
+
+y_fg  = rms(x_validate_fg,    axis=(0,2))
+y_eor = rms(x_validate_label, axis=(0,2))
+
+
+# In[43]:
+
+
+def plot_fgeor_rms(y_fg, y_eor, figsize=(10,5)):
+    x = np.arange(len(y_fg))
+    fig, (ax0, ax1) = plt.subplots(ncols=2, figsize=(17, 7))
+
+    ax0.plot(x, y_fg, alpha=0.8, lw=2.5)
+    ax0.set(title='Foreground')
+
+    ax1.plot(x, y_eor, alpha=0.8, lw=2.5)
+    ax1.set(title='EoR')
+
+    ax1_ = ax1.twinx()
+    ax1_.plot(x, y_eor / y_fg, color='C3', alpha=0.6, lw=2, ls='--', label='EoR/FG')
+    ax1_.legend()
+
+    fig.tight_layout()
+    plt.show()
+    return (fig, (ax0, ax1))
+    
+    
+fig, axes = plot_fgeor_rms(y_fg, y_eor)
+
+
+# In[55]:
+
+
+def plot_occlusion_fgeor(dcc, y_fg, y_eor, nex=nex, figsize=(14, 6)):
+    nfreq = len(dcc)
+    nfreq0 = nfreq + 2*nex - 1
+    n = nfreq // 2
+    tx = np.arange(nfreq0) - (nfreq0//2)
+
+    fig, (ax0, ax1) = plt.subplots(ncols=2, figsize=figsize)
+
+    y = np.concatenate([y_fg[n:], [np.nan]*(2*nex-1), y_fg[:n]])
+    ax = ax0
+    ax.plot(tx, y, color='C0', alpha=0.8, lw=2, label='Foreground')
+    ax.axvspan(-(nex-1), (nex-1), fill=False, edgecolor="magenta", hatch="/", alpha=0.5)
+    ax.set(
+        title='Foreground vs. Sensitivity',
+        xlabel='Fourier frequency',
+        ylabel='Normalized amplitude',
+        xlim=(-nfreq0//2-1, nfreq0//2+1),
+    )
+
+    y = np.concatenate([dcc[n:], [np.nan]*(2*nex-1), dcc[:n]])
+    ax_ = ax.twinx()
+    ax_.plot(tx, y, color='C1', alpha=0.8, lw=2.5, label='Sensitivity')
+    ax_.grid(False)
+    ax_.set(ylabel='Sensitivity')
+
+    h1, l1 = ax.get_legend_handles_labels()
+    h2, l2 = ax_.get_legend_handles_labels()
+    ax_.legend(h1+h2, l1+l2, loc='upper right')
+
+    y = np.concatenate([y_eor[n:], [np.nan]*(2*nex-1), y_eor[:n]])
+    ax = ax1
+    ax.plot(tx, y, color='C5', alpha=0.8, lw=2, label='EoR')
+    ax.axvspan(-(nex-1), (nex-1), fill=False, edgecolor="magenta", hatch="/", alpha=0.5)
+    ax.set(
+        title='EoR vs. Sensitivity',
+        xlabel='Fourier frequency',
+        ylabel='Normalized amplitude',
+        xlim=(-nfreq0//2-1, nfreq0//2+1),
+    )
+
+    y = np.concatenate([dcc[n:], [np.nan]*(2*nex-1), dcc[:n]])
+    ax_ = ax.twinx()
+    ax_.plot(tx, y, color='C1', alpha=0.8, lw=2.5, label='Sensitivity')
+    ax_.grid(False)
+    ax_.set(ylabel='Sensitivity')
+
+    h1, l1 = ax.get_legend_handles_labels()
+    h2, l2 = ax_.get_legend_handles_labels()
+    ax_.legend(h1+h2, l1+l2, loc='upper right')
+
+    fig.tight_layout()
+    plt.show()
+    return (fig, (ax0, ax1))
+
+
+# In[56]:
+
+
+epoch = 50
+dcc = occ_results[epoch]['dcc_mean']
+print('CC (dcc & fg ): %.3f' % corrcoef(dcc[1:-1], y_fg[1:-1]))
+print('CC (dcc & eor): %.3f' % corrcoef(dcc[1:-1], y_eor[1:-1]))
+
+fig, axes = plot_occlusion_fgeor(dcc, y_fg, y_eor)
+if True:
+    fn = 'occlusion-fgeor.pdf'
+    fig.savefig(fn)
+    print('figure saved to file: %s' % path.abspath(fn))
+
+
+# In[48]:
+
+
+def plot_occlusion_epoch(occ_results, y_fg, y_eor, figsize=None):
+    nepoch = len(occ_results.keys())
+    x = np.arange(1, nepoch+1)
+    cc_fg = np.zeros((nepoch,))
+    cc_eor = np.zeros((nepoch,))
+
+    for i, e in enumerate(x):
+        res = occ_results[e]
+        dcc = res['dcc_mean']
+        cc_fg[i]  = corrcoef(dcc[1:-1], y_fg[1:-1])
+        cc_eor[i] = corrcoef(dcc[1:-1], y_eor[1:-1])
+
+    fig, ax = plt.subplots()
+
+    ax.plot(x, cc_fg, color='C0', lw=2.5, label='Foreground')
+    ax.plot(x, cc_eor, color='C5', lw=2.5, label='EoR')
+    ax.set(xlabel='Epoch', ylabel='Correlation coefficient')
+
+    ax_ = ax.twinx()
+    ax_.plot(x, cc_eor-cc_fg, color='C1', lw=2.5, ls='--', label='Difference')
+    ax_.set(ylabel='CC difference')
+    ax_.grid(False)
+
+    h1, l1 = ax.get_legend_handles_labels()
+    h2, l2 = ax_.get_legend_handles_labels()
+    ax_.legend(h1+h2, l1+l2, loc='center right')
+
+    fig.tight_layout()
+    plt.show()
+    return (fig, ax)
+
+
+fig, ax = plot_occlusion_epoch(occ_results, y_fg, y_eor)
+if True:
+    fn = 'occlusion-epoch.pdf'
+    fig.savefig(fn)
+    print('figure saved to file: %s' % path.abspath(fn))
 
