@@ -1,2 +1,2 @@
-from cwtcore import *
-import cwt_filter
+from .cwtcore import *
+from . import cwt_filter
