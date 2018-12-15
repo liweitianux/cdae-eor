@@ -1,22 +1,37 @@
-#BOOST_INC=/usr/include/boost
-BOOST_LIB=`./boost_python_version.sh`
+CXX?=		g++
+CXXFLAGS?=	-Wall -fPIC
 
+PY?=		python3
+PY_VERSION:=	$(shell $(PY) -V | cut -c8-10)
+INC_PY:=	$(shell $(PY)-config --includes)
+LIB_PY:=	$(shell $(PY)-config --libs)
+LIB_BOOST?=	-lboost_python$(subst .,,$(PY_VERSION)) \
+		-lboost_numpy$(subst .,,$(PY_VERSION))
 
-#CXX=g++
+INC_GSL?=	$(shell gsl-config --cflags)
+LIB_GSL?=	$(shell gsl-config --libs)
 
-target:cwt1d.so
+INC_FIO?=	-I../deps/fio/include
+LIB_FIO?=	-L../deps/fio/lib -lfio -lcfitsio -lblitz
+LIB_FFTW?=	-lfftw3_threads -lfftw3f_threads -lfftw3 -lfftw3f
 
-cwt1d.so:pycwt1d.o fftw_blitz.o
-	$(CXX) -o $@ $< --shared `python-config --libs` -lgsl -lgslcblas $(BOOST_LIB) -fPIC fftw_blitz.o -lfftw3 -lfftw3f -lfftw3_threads -lfftw3f_threads
+all: cwt1d.so
 
-pycwt1d.o:pycwt1d.cpp
-	$(CXX) -c -o $@ $< `python-config --includes` -fPIC -I ../cwt1d/ -I ../fftw_blitz 
+cwt1d.so: pycwt1d.o fftw_blitz.o
+	$(CXX) $(CXXFLAGS) --shared -o $@ $^ \
+	    $(LIB_PY) $(LIB_GSL) $(LIB_BOOST) $(LIB_FFTW)
 
-fftw_blitz.o:
-	g++ -c ../fftw_blitz/fftw_blitz.cpp -I ../fftw_blitz -o $@ -fPIC
+pycwt1d.o: pycwt1d.cpp cwt1d_wavelets.hpp cwt1d.hpp
+	$(CXX) $(CXXFLAGS) $(INC_PY) $(INC_GSL) $(INC_FIO) -c $<
 
+fftw_blitz.o: fftw_blitz.cpp fftw_blitz.hpp
+	$(CXX) $(CXXFLAGS) $(INC_FIO) -c $<
 
 clean:
-	rm -f cwt1d.so `find -iname '*.o'`
+	rm -f *.o *.so
 
-
+test:
+	echo $(PY) $(PY_VERSION)
+	echo $(INC_PY)
+	echo $(LIB_PY)
+	echo $(LIB_BOOST)
