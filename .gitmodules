@@ -1,0 +1,6 @@
+[submodule "cwt/deps/fio"]
+	path = cwt/deps/fio
+	url = https://github.com/liweitianux/fio
+[submodule "cwt/deps/opt_utilities"]
+	path = cwt/deps/opt_utilities
+	url = https://github.com/liweitianux/opt_utilities
