@@ -1,7 +1,7 @@
 #ifndef CWT1D
 #define CWT1D
 #include <complex>
-#include <fftw_blitz.hpp>
+#include "fftw_blitz.hpp"
 
 namespace cwt1d
 {

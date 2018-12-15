@@ -19,7 +19,7 @@ using namespace boost;
 using namespace boost::python;
 using namespace boost::python::numpy;
 
-#include <cwt1d_wavelets.hpp>
+#include "cwt1d_wavelets.hpp"
 using namespace std;
 using namespace cwt1d;
 
