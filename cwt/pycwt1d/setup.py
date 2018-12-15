@@ -1,32 +1,25 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
-import sys
 from distutils.core import setup, Extension
 
-if sys.version_info.major==3:
-    boost_python_lib='boost_python3'
-    boost_python_numpy_lib='boost_numpy3'
-else:
-    boost_python_lib='boost_python'
-    boost_python_numpy_lib='boost_numpy'
 
-module1=Extension('cwt1d.cwtcore',
-                  include_dirs=[
-                      '../cwt1d/',
-                      '../fftw_blitz',
-                      '../fio/include',
-                  ],
-                  libraries=[
-                      boost_python_lib,
-                      boost_python_numpy_lib,
-                      'gsl',
-                      'gslcblas',
-                      'fftw3f',
-                      'fftw3_threads',
-                      'fftw3f_threads',
-                  ],
-                  library_dirs=['../fio/lib'],
-                  sources=['../fftw_blitz/fftw_blitz.cpp','pycwt1d.cpp'])
+module1 = Extension(
+        'cwt1d.cwtcore',
+        sources=[
+            'src/pycwt1d.cpp',
+            'src/fftw_blitz.cpp',
+        ],
+        include_dirs=['deps/include'],
+        libraries=[
+            'boost_python3',
+            'boost_numpy3',
+            'gsl',
+            'gslcblas',
+            'fftw3f',
+            'fftw3_threads',
+            'fftw3f_threads',
+        ],
+)
 
 setup(name='cwtcore',
       packages=['cwt1d'],
