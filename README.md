@@ -16,6 +16,7 @@ Guides
 2. [Data simulation](doc/data.md)
 3. [EoR signal separation with a CDAE](code/cdae.ipynb)
 4. [Polynomial fitting method](code/polyfit.ipynb)
+5. [Continuous wavelet transform method](code/cwt.ipynb)
 
 
 License
