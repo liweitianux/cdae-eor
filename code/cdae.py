@@ -60,7 +60,7 @@ from scipy import fftpack
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 
-get_ipython().run_line_magic('matplotlib', 'inline')
+get_ipython().magic('matplotlib inline')
 
 
 # In[3]:
@@ -428,9 +428,8 @@ def plot_modelresult(idx, xinput, xlabel, xpred, nex=6, figsize=(8, 8)):
 # In[16]:
 
 
-# datadir = '../data'
+datadir = '../data'
 
-datadir = path.expanduser('~/works/eor-detection/oskar')
 # training & valiation data
 cube_eor = fits.open(path.join(datadir, 'eor.uvcut_b158c80_n360-cube.fits'))[0].data
 cube_fg  = fits.open(path.join(datadir, 'fg.uvcut_b158c80_n360-cube.fits' ))[0].data
@@ -439,7 +438,6 @@ cube_eor2 = fits.open(path.join(datadir, 'eor.uvcut.sft_b158c80_n360-cube.fits')
 cube_fg2  = fits.open(path.join(datadir, 'fg.uvcut.sft_b158c80_n360-cube.fits' ))[0].data
 
 # without instrument observation
-datadir = path.join(datadir, '../skymap')
 skycube_eor = fits.open(path.join(datadir, 'eor_b158c80_n360-cube.fits'))[0].data
 skycube_fg  = fits.open(path.join(datadir, 'fg_b158c80_n360-cube.fits' ))[0].data
 
