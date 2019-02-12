@@ -141,8 +141,7 @@ def corrcoef_freqpix(fparray1, fparray2):
 # In[8]:
 
 
-#datadir = '../data'
-datadir = path.expanduser('~/works/eor-detection/oskar')
+datadir = '../data'
 cube_eor = fits.open(path.join(datadir, 'eor.uvcut.sft_b158c80_n360-cube.fits'))[0].data.astype(float)
 cube_fg  = fits.open(path.join(datadir, 'fg.uvcut.sft_b158c80_n360-cube.fits' ))[0].data.astype(float)
 cube_tot = cube_fg + cube_eor
