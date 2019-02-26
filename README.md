@@ -8,6 +8,8 @@ Introduction
 This repository holds the [code](code), [data](data), and [documentation](doc)
 that are associated with the paper entitled
 [Separating the EoR Signal with a Convolutional Denoising Autoencoder: A Deep-learning-based Method](paper.pdf).
+[(arXiv:1902.09278)](https://arxiv.org/abs/1902.09278)
+[(doi:10.1093/mnras/stz582)](http://dx.doi.org/10.1093/mnras/stz582)
 
 
 Guides
