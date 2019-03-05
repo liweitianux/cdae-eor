@@ -27,6 +27,29 @@ and EoR signal separation.
           qtbase5-dev
     ```
 
+    On openSuSE (maybe also CentOS), use:
+
+    ```sh
+    $ sudo zypper install \
+          bison \
+          cmake \
+          flex \
+          gcc \
+          gcc-c++ \
+          gcc-fortran \
+          boost-devel \
+          cfitsio-devel \
+          fftw3-devel \
+          fftw3-threads-devel \
+          gsl-devel \
+          hdf5-devel \
+          blas-devel \
+          lapack-devel \
+          wcslib-devel \
+          zlib-devel \
+          ...
+    ```
+
 2. Install CUDA:
 
     ```sh
