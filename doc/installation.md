@@ -20,10 +20,11 @@ and EoR signal separation.
           libgsl-dev \
           libhdf5-dev \
           libopenblas-dev \
+          wcslib-dev \
+          zlib1g-dev \
           python-dev \
           python-numpy \
-          qtbase5-dev \
-          wcslib-dev
+          qtbase5-dev
     ```
 
 2. Install CUDA:
