@@ -6,10 +6,28 @@ EoR Signal Separation with a CDAE
 Introduction
 ------------
 This repository holds the [code](code), [data](data), and [documentation](doc)
-that are associated with the paper entitled
-[Separating the EoR Signal with a Convolutional Denoising Autoencoder: A Deep-learning-based Method](paper.pdf).
-[(arXiv:1902.09278)](https://arxiv.org/abs/1902.09278)
-[(doi:10.1093/mnras/stz582)](http://dx.doi.org/10.1093/mnras/stz582)
+that are associated with the following paper:
+
+**Title**:
+Separating the EoR Signal with a Convolutional Denoising Autoencoder: A Deep-learning-based Method
+
+**Authors**:
+Weitian Li,
+Haiguang Xu,
+Zhixian Ma,
+Ruimin Zhu,
+Dan Hu,
+Zhenghao Zhu,
+Junhua Gu,
+Chenxi Shan,
+Jie Zhu,
+Xiang-Ping Wu
+
+**Journal**:
+[2019, MNRAS, 485, 2628](http://dx.doi.org/10.1093/mnras/stz582)
+
+**arXiv**:
+[1902.09278](https://arxiv.org/abs/1902.09278)
 
 
 Guides
