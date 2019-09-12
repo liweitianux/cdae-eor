@@ -429,7 +429,7 @@ the simulated SKA images.
    ```
 
 7. Create image cube and crop by using
-   [`fitscube.py`](https://github.com/liweitianux/atoolbox/blob/master/astro/fits/fitscube.py):
+   [`fitscube.py`](https://github.com/liweitianux/atoolbox/blob/master/astro/fitscube.py):
 
    ```sh
    $ fitscube.py create -z 154e6 -s 80e3 -u Hz \
